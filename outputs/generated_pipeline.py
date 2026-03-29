@@ -3,7 +3,7 @@
 # Target table : fraud_transactions
 # Source file  : data/raw/sample_transactions.csv
 # Framework    : pandas
-# Generated at : 2026-03-29 20:37:39 UTC
+# Generated at : 2026-03-29 21:03:08 UTC
 # Mode         : llm_only
 # =============================================================================
 
@@ -58,22 +58,24 @@ def run():
     df, rejected_df = filter_valid_values(df, "is_fraud", [0, 1])
     rejected_counts["is_fraud"] = len(rejected_df)
 
+    df, rejected_df = filter_not_null(df, ["account_balance", "cardholder_age"])
+    rejected_counts["nulls"] = len(rejected_df)
+
+    df = impute_nulls(df, "account_balance", strategy="mean")
+    df = filter_range(df, "cardholder_age", 18, 110)[0]
+
+    df = cast_column(df, "credit_limit", "decimal")
+    df = cast_column(df, "account_balance", "decimal")
+
     df = convert_seconds_to_timestamp(df, "transaction_timestamp", "transaction_timestamp")
     df = add_ingestion_timestamp(df)
 
-    df = add_transaction_date(df, "transaction_timestamp", "transaction_date")
-    df = add_transaction_hour(df, "transaction_timestamp", "transaction_hour")
-    df = add_is_weekend(df, "transaction_timestamp", "is_weekend")
-    df = add_amount_category(df, "transaction_amount", "amount_category")
-    df = add_utilization_rate(df, "account_balance", "credit_limit", "utilization_rate")
-    df = add_is_high_risk_context(df, "is_foreign_transaction", "num_declined_7d", "distance_from_home_km", "is_high_risk_context")
-
-    df = standardize_country_codes(df, "merchant_country")
-    df = replace_blank_with(df, "merchant_name", "Unknown Merchant")
-    df = df.fillna({"account_balance": 0})
-
-    df = df[df["cardholder_age"].between(18, 110)]
-    df = df[df["distance_from_home_km"] >= 0]
+    df = add_transaction_date(df, "transaction_timestamp")
+    df = add_transaction_hour(df, "transaction_timestamp")
+    df = add_is_weekend(df, "transaction_timestamp")
+    df = add_amount_category(df, "transaction_amount")
+    df = add_utilization_rate(df, "account_balance", "credit_limit")
+    df = add_is_high_risk_context(df, "is_foreign_transaction", "num_declined_7d", "distance_from_home_km")
 
     save_csv(df, OUTPUT_PATH)
     generate_validation_report(df_input, df, rejected_counts, REPORT_PATH)

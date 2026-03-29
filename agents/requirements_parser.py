@@ -222,7 +222,7 @@ def _build_requirements_prompt(text):
         "    }\n"
         "  ],\n"
         '  "unmapped_source_columns": ["string"],\n'
-        '  "target_columns_expected": ["string"]\n'
+        '  "target_columns_expected": ["string"],\n'
         "}\n\n"
         "Rules:\n"
         "- Use explicit rename rules if listed.\n"

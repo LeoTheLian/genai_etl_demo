@@ -10,8 +10,6 @@ Source Data Overview:
 - Records: 1,000 transactions
 - Columns: 25
 - Fraud distribution: ~31 fraudulent (~3%), ~969 legitimate (~97%)
-- Known data quality issues: 20 negative amounts, 30 extreme outliers, 15 null account_balance, 10 invalid ages, 10 blank merchant names, 8 negative distances
-
 
 Source Schema (as received from vendor):
 Core:
@@ -135,19 +133,6 @@ Transformation Requirements:
 
 ---
 
-Data Quality Rules:
-- transaction_id must be unique and not null; format must match TXN_\d{6}
-- transaction_amount must be > 0
-- is_fraud must be exactly 0 or 1
-- cardholder_age must be between 18 and 110 (inclusive)
-- credit_limit must be > 0
-- distance_from_home_km must be >= 0
-- is_foreign_transaction must be 0 or 1
-- channel must be one of: in-store, online, atm
-- pos_entry_mode must be one of: chip, swipe, contactless, online, manual
-- merchant_category must be one of the known categories in the source system
-- No null values allowed in: transaction_id, transaction_timestamp, transaction_amount, is_fraud, account_id, merchant_id, channel
-
 Output Requirements:
 - Output location: data/processed/fraud_transactions.csv
 - Format: CSV with headers
@@ -158,28 +143,6 @@ Validation Requirements:
 Generate a validation report (data/processed/validation_report.txt) including:
   - total_records_input
   - total_records_output
-  - records_with_imputed_account_balance
-  - records_with_unknown_merchant_name
-  - fraud_distribution: {legitimate: X, fraudulent: Y}
-  - amount_category_distribution: {low, medium, high, outlier}
-  - merchant_country_standardization: {before: distinct values, after: distinct values}
-  - pass/fail status for each data quality rule
+  - transformations_performed (list of key transformations applied)
 
-Pipeline must FAIL if:
-  - transaction_id uniqueness is violated in output
-  - Output record count is 0
-  - Any critical field contains null in output
 
-Testing Requirements:
-Automated tests must validate:
-  - All expected target columns are present with correct types
-  - transaction_id uniqueness
-  - is_fraud values are only 0 or 1
-  - transaction_amount > 0 for all records
-  - cardholder_age is within 18-110
-  - distance_from_home_km >= 0
-  - merchant_country contains only standardized ISO codes in output
-  - Derived column logic (amount_category, is_weekend, utilization_rate, is_high_risk_context)
-  - ingestion_timestamp is populated on all rows
-
-Output a test report (data/processed/test_report.txt) with pass/fail per test and failure details.

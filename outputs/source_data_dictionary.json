@@ -22,7 +22,7 @@
     {
       "name": "Time",
       "dtype": "int64",
-      "business_meaning": "Timestamp of the transaction in seconds",
+      "business_meaning": "Time of transaction in seconds since epoch",
       "null_pct": 0.0,
       "sample_values": [
         121958,
@@ -38,7 +38,7 @@
     {
       "name": "Amount",
       "dtype": "float64",
-      "business_meaning": "Monetary amount of the transaction",
+      "business_meaning": "Transaction amount",
       "null_pct": 0.0,
       "sample_values": [
         22.80044394438993,
@@ -106,7 +106,7 @@
     {
       "name": "credit_limit",
       "dtype": "int64",
-      "business_meaning": "Credit limit assigned to the account",
+      "business_meaning": "Credit limit for the account",
       "null_pct": 0.0,
       "sample_values": [
         15000,
@@ -317,7 +317,7 @@
     {
       "name": "is_foreign_transaction",
       "dtype": "int64",
-      "business_meaning": "Indicates if the transaction is foreign (1) or domestic (0)",
+      "business_meaning": "Indicates if the transaction is foreign (1) or not (0)",
       "null_pct": 0.0,
       "sample_values": [
         0,
