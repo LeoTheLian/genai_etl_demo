@@ -115,81 +115,63 @@ def _build_testing_prompt(
                 - For transformation validations (renames, type casting, filtering,
                     and derivations), compare source_df vs df whenever applicable.
 
+                Strict scope:
+                - Test cases must strictly follow the provided requirements document.
+                - Derive tests from these sections in order:
+                    1) Target Schema
+                    2) Transformation Requirements
+                    3) Type Standardization
+                    4) Output Requirements
+                    5) Validation Requirements
+                - Do not invent checks not grounded in requirement statements.
+                - If a requirement cannot be validated from source_df/df alone,
+                    return a single informational PASS with clear reason in details.
+
+                Requirement precedence:
+                - Raw requirements text is the source of truth.
+                - Use parsed_requirements only as a helper for schema and rename extraction.
+
                 The function must:
         1. Return a list of dictionaries, each with keys:
            - name (str)
            - passed (bool)
            - details (str)
-        2. Implement checks inferred from the requirements.
+                2. Implement checks directly mapped to explicit requirement statements.
         3. Be deterministic, pure (no file I/O), and robust to missing columns.
         4. Use pandas operations only (assume pd is already imported).
         5. Catch edge cases and return failing test rows as summary text, not stack traces.
 
-                Required baseline checks:
-                Tier 1 (always include):
-                - dataset_non_empty
-                - row_count_sanity
-                - expected_columns_present
-                - required_fields_not_null
-                - id_uniqueness
-                - duplicate_rows_absent
-                - numeric_type_coercion_success
-                - timestamp_parse_success
+                Required check mapping for the current requirements document:
+                - expected_columns_present:
+                    validate all target schema columns exist in `df`.
+                - rename_mapping_applied:
+                    validate source-to-target rename intent (Time -> transaction_timestamp,
+                    Amount -> transaction_amount, Class -> is_fraud) is reflected in output.
+                - timestamp_conversion_logic:
+                    validate transaction_timestamp aligns to reference start
+                    2020-01-01 00:00:00 UTC + Time seconds for comparable rows.
+                - merchant_country_standardization:
+                    validate USA/us/U.S./United States are standardized to US.
+                - merchant_name_blank_handling:
+                    validate blank merchant_name values are handled as NULL or UNKNOWN.
+                - type_standardization_checks:
+                    validate required target type families using pandas-compatible checks
+                    (numeric/integer/string/timestamp expectations).
+                - output_schema_rowcount_sanity:
+                    validate output has rows, and report source_row_count vs output_row_count.
 
-                Tier 2 (requirements-driven, extract Testing Requirements from requirements_document if available):
-                Precedence rules:
-                - Requirement-specific constraints override generic defaults.
-                - If a check is not inferable from requirements/schema, skip it gracefully.
-
-                Required implementation details for two key checks:
-
-                1) expected_columns_present
-                - Must compare output columns against parsed_requirements["target_columns_expected"]
-                    (target schema), not raw source columns.
-                - Must account for rename intent in requirements (for example Time ->
-                    transaction_timestamp, Amount -> transaction_amount, Class -> is_fraud).
-                - In details, explicitly include:
-                    - expected_target_count
-                    - present_target_count
-                    - missing_target_columns (if any)
-                    - rename_coverage summary using parsed_requirements.get("rename_rules", {{}})
-                    - whether legacy source names still appear in output (informational)
-
-                                2) row_count_sanity
-                - Must coordinate with requirements-based filtering expectations.
-                                - Use source_df row count as first-class input baseline; use requirements
-                                    text row count as a secondary cross-check when available (for example
-                                    "Records: 1,000").
-                - Infer required-removal expectations from required cleaning rules and
-                    estimated counts (for example negative amount, negative distance,
-                    invalid age).
-                - Treat optional filtering/imputation rules as informational unless the
-                    requirements make them mandatory.
-                - In details, explicitly include:
-                                        - source_row_count
-                    - input_row_count_from_requirements (or "unknown")
-                    - output_row_count
-                    - expected_required_removals_estimate
-                                        - observed_removed_count (source_row_count - output_row_count)
-                    - pass/fail rationale tied to required vs optional filtering guidance
-
-                                3) transformation_comparison_sanity
-                                - Include at least one dedicated comparison test that validates key
-                                    transformation intent from source_df to df (for example rename mapping
-                                    coverage, castability from source types to target expectations, and
-                                    required filtering effect).
-                                - In details, summarize compared columns and mismatches.
+                Required detail fields for key checks:
+                - expected_columns_present details must include:
+                    expected_target_count, present_target_count, missing_target_columns,
+                    rename_coverage summary, and legacy source names still present (informational).
+                - output_schema_rowcount_sanity details must include:
+                    source_row_count, output_row_count, removed_count, and requirement-based rationale.
 
                 Reporting requirements for each test result:
-                - Keep test names stable and snake_case.
+                - Keep names stable and snake_case.
                 - Include actionable details: fail_count (if relevant), affected columns,
                     and sample invalid values or sample failing row indexes.
-                - Avoid stack traces in details; return concise business-readable summaries.
-
-                Failure handling defaults:
-                - Tier 1 checks should fail when violated.
-                - outlier_rate_sanity should be informational unless requirements explicitly
-                    define a hard threshold.
+                - Avoid stack traces in details; use concise requirement-referenced summaries.
 
         Rules:
         - Start with `def generate_test_results(source_df, df, parsed_requirements):`
@@ -220,8 +202,9 @@ def _generate_tests_code_llm(
     processed_df: pd.DataFrame,
 ) -> str:
     system_prompt = (
-        "You are a senior Python data-quality engineer. Return only Python code "
-        "for the requested function with no markdown."
+        "You are a senior Python data-quality engineer. Generate tests strictly "
+        "from the provided requirements document. Return only Python code for "
+        "the requested function with no markdown."
     )
     user_prompt = _build_testing_prompt(
         requirements_text,

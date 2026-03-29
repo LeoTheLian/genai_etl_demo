@@ -4,14 +4,14 @@ source_data_path: data/raw/sample_transactions.csv
 processed_data_path: data/processed/fraud_transactions.csv
 generated_tests_output_path: outputs\generated_tests.py
 source_row_count: 1000
-row_count: 955
+row_count: 965
 all_passed: False
 
 --- Test Results ---
-FAIL | row_count_sanity | Source: 1000, Output: 955, Expected Removals: 83, Observed Removed: 45
-PASS | expected_columns_present | Expected: 32, Present: 32, Missing: [], Rename Coverage: {'Time': 'transaction_timestamp', 'Amount': 'transaction_amount', 'Class': 'is_fraud'}, Legacy Names Present: []
-FAIL | required_fields_not_null | Null fields: ['merchant_name']
-PASS | id_uniqueness | Transaction IDs are unique.
+PASS | row_count_sanity | Source row count: 1000, Output row count: 965, Observed removed count: 35.
+PASS | expected_columns_present | Expected target count: 32, Present target count: 32, Missing target columns: [].
+PASS | required_fields_not_null | Null counts for required fields: {}.
+PASS | id_uniqueness | All transaction IDs are unique.
 PASS | duplicate_rows_absent | No duplicate rows found.
-PASS | numeric_type_coercion_success | Numeric types are correct.
-PASS | timestamp_parse_success | Timestamps parsed successfully.
+FAIL | numeric_type_coercion_success | Numeric type coercion success check.
+PASS | timestamp_parse_success | All timestamps parsed successfully.

@@ -54,23 +54,23 @@ Target Schema:
 Core:
   - transaction_id:          string        — pass through, uniqueness enforced
   - transaction_timestamp:   timestamp     — derived from "Time" (seconds → datetime)
-  - transaction_amount:      decimal(10,2) — validated, must be > 0
-  - is_fraud:                integer       — 0 or 1 only
+  - transaction_amount:      decimal(10,2) 
+  - is_fraud:                integer       
   - ingestion_timestamp:     timestamp     — pipeline execution time (system-generated)
 
 Account / Cardholder:
-  - account_id:              string  — pass through
-  - account_age_days:        integer — pass through
+  - account_id:              string
+  - account_age_days:        integer
   - credit_limit:            decimal(10,2)
-  - account_balance:         decimal(10,2) — nulls handled per cleaning rules
-  - cardholder_age:          integer — validated (must be 18-110)
+  - account_balance:         decimal(10,2)
+  - cardholder_age:          integer
   - cardholder_city:         string
   - cardholder_state:        string — 2-letter uppercase code
   - cardholder_zip:          string
 
 Merchant:
   - merchant_id:             string
-  - merchant_name:           string — blanks handled per cleaning rules
+  - merchant_name:           string
   - merchant_category:       string — standardized to lowercase
   - merchant_city:           string
   - merchant_state:          string — 2-letter uppercase code
@@ -79,8 +79,8 @@ Merchant:
 Transaction Context:
   - channel:                 string — standardized to lowercase
   - pos_entry_mode:          string — standardized to lowercase
-  - is_foreign_transaction:  integer (0 or 1)
-  - distance_from_home_km:   float  — validated, must be >= 0
+  - is_foreign_transaction:  integer 
+  - distance_from_home_km:   float  
   - num_transactions_24h:    integer
   - num_declined_7d:         integer
   - avg_amount_30d:          decimal(10,2)
@@ -119,14 +119,10 @@ Transformation Requirements:
         All others pass through as-is
    b) Replace blank merchant_name with NULL / "UNKNOWN"
 
-4. Data Filtering (optional — flag for review):
-   - Identify extreme outliers: amount_category = 'outlier' (~30 records expected)
-   - Identify records with NULL account_balance (~15 records expected);
-     decide: impute with median OR flag and exclude from balance-dependent analytics
 
-5. Type Standardization:
-   - transaction_amount, credit_limit, account_balance, avg_amount_30d → decimal(10,2)
-   - is_fraud, is_foreign_transaction, is_weekend, is_high_risk_context → int8 (0 or 1)
+4. Type Standardization:
+   - transaction_amount, credit_limit, account_balance, avg_amount_30d → float64
+   - is_fraud, is_foreign_transaction, is_weekend, is_high_risk_context → int8
    - cardholder_age, account_age_days, num_transactions_24h, num_declined_7d → int32
    - distance_from_home_km, utilization_rate → float64
    - All string/category columns → string (stripped of leading/trailing whitespace)

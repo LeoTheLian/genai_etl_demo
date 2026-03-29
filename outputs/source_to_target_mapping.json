@@ -141,12 +141,12 @@
     {
       "name": "transaction_amount",
       "type": "decimal(10,2)",
-      "description": "validated, must be > 0"
+      "description": ""
     },
     {
       "name": "is_fraud",
       "type": "integer",
-      "description": "0 or 1 only"
+      "description": ""
     },
     {
       "name": "ingestion_timestamp",
@@ -156,12 +156,12 @@
     {
       "name": "account_id",
       "type": "string",
-      "description": "pass through"
+      "description": ""
     },
     {
       "name": "account_age_days",
       "type": "integer",
-      "description": "pass through"
+      "description": ""
     },
     {
       "name": "credit_limit",
@@ -171,12 +171,12 @@
     {
       "name": "account_balance",
       "type": "decimal(10,2)",
-      "description": "nulls handled per cleaning rules"
+      "description": ""
     },
     {
       "name": "cardholder_age",
       "type": "integer",
-      "description": "validated (must be 18-110)"
+      "description": ""
     },
     {
       "name": "cardholder_city",
@@ -201,7 +201,7 @@
     {
       "name": "merchant_name",
       "type": "string",
-      "description": "blanks handled per cleaning rules"
+      "description": ""
     },
     {
       "name": "merchant_category",
@@ -235,13 +235,13 @@
     },
     {
       "name": "is_foreign_transaction",
-      "type": "integer (0 or 1)",
+      "type": "integer",
       "description": ""
     },
     {
       "name": "distance_from_home_km",
       "type": "float",
-      "description": "validated, must be >= 0"
+      "description": ""
     },
     {
       "name": "num_transactions_24h",
@@ -317,7 +317,7 @@
       "target_type": "decimal(10,2)",
       "mapping_type": "rename",
       "transformation": "Rename Amount to transaction_amount",
-      "description": "validated, must be > 0"
+      "description": ""
     },
     {
       "source_column": "Class",
@@ -325,7 +325,7 @@
       "target_type": "integer",
       "mapping_type": "rename",
       "transformation": "Rename Class to is_fraud",
-      "description": "0 or 1 only"
+      "description": ""
     },
     {
       "source_column": null,
@@ -341,7 +341,7 @@
       "target_type": "string",
       "mapping_type": "pass_through",
       "transformation": "Pass through with optional standardization",
-      "description": "pass through"
+      "description": ""
     },
     {
       "source_column": "account_age_days",
@@ -349,7 +349,7 @@
       "target_type": "integer",
       "mapping_type": "pass_through",
       "transformation": "Pass through with optional standardization",
-      "description": "pass through"
+      "description": ""
     },
     {
       "source_column": "credit_limit",
@@ -365,7 +365,7 @@
       "target_type": "decimal(10,2)",
       "mapping_type": "pass_through",
       "transformation": "Pass through with optional standardization",
-      "description": "nulls handled per cleaning rules"
+      "description": ""
     },
     {
       "source_column": "cardholder_age",
@@ -373,7 +373,7 @@
       "target_type": "integer",
       "mapping_type": "pass_through",
       "transformation": "Pass through with optional standardization",
-      "description": "validated (must be 18-110)"
+      "description": ""
     },
     {
       "source_column": "cardholder_city",
@@ -413,7 +413,7 @@
       "target_type": "string",
       "mapping_type": "pass_through",
       "transformation": "Pass through with optional standardization",
-      "description": "blanks handled per cleaning rules"
+      "description": ""
     },
     {
       "source_column": "merchant_category",
@@ -466,7 +466,7 @@
     {
       "source_column": "is_foreign_transaction",
       "target_column": "is_foreign_transaction",
-      "target_type": "integer (0 or 1)",
+      "target_type": "integer",
       "mapping_type": "pass_through",
       "transformation": "Pass through with optional standardization",
       "description": ""
@@ -477,7 +477,7 @@
       "target_type": "float",
       "mapping_type": "pass_through",
       "transformation": "Pass through with optional standardization",
-      "description": "validated, must be >= 0"
+      "description": ""
     },
     {
       "source_column": "num_transactions_24h",
