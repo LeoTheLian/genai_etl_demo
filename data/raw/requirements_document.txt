@@ -1,0 +1,185 @@
+Project: Credit Card Transaction Data Ingestion Pipeline
+
+Business Context:
+The organization requires a reliable and scalable ingestion pipeline to process raw credit card transaction data and prepare it for fraud detection analytics and model training.
+
+The source data (data/raw/sample_transactions.csv) simulates a real credit card transaction feed received from a card payment vendor. It contains 1,000 transactions with account details, cardholder demographics, merchant information, and transaction context. The pipeline must clean invalid records, standardize inconsistent values, derive analytical columns, and prepare the dataset for downstream analytical workloads.
+
+Source Data Overview:
+- File: data/raw/sample_transactions.csv
+- Records: 1,000 transactions
+- Columns: 25
+- Fraud distribution: ~31 fraudulent (~3%), ~969 legitimate (~97%)
+- Known data quality issues: 20 negative amounts, 30 extreme outliers, 15 null account_balance, 10 invalid ages, 10 blank merchant names, 8 negative distances
+
+
+Source Schema (as received from vendor):
+Core:
+  - transaction_id:          string  — unique transaction reference (format: TXN_XXXXXX)
+  - Time:                    integer — seconds elapsed since start of batch window
+  - Amount:                  float   — transaction amount in USD
+  - Class:                   integer — fraud label (1 = fraud, 0 = legitimate)
+
+Account / Cardholder:
+  - account_id:              string  — card account identifier (format: ACC_XXXXXX)
+  - account_age_days:        integer — days since account was opened
+  - credit_limit:            float   — credit limit on the account
+  - account_balance:         float   — current outstanding balance (nullable)
+  - cardholder_age:          integer — age of the cardholder in years
+  - cardholder_city:         string  — cardholder's home city
+  - cardholder_state:        string  — cardholder's home state (2-letter code)
+  - cardholder_zip:          string  — cardholder's home ZIP code
+
+Merchant:
+  - merchant_id:             string  — merchant identifier
+  - merchant_name:           string  — legal merchant name (may be blank)
+  - merchant_category:       string  — merchant category (e.g., grocery, gas_station)
+  - merchant_city:           string  — merchant location city
+  - merchant_state:          string  — merchant location state (2-letter code)
+  - merchant_country:        string  — merchant country (inconsistently formatted)
+
+Transaction Context:
+  - channel:                 string  — transaction channel (in-store, online, atm)
+  - pos_entry_mode:          string  — how card was entered (chip, swipe, contactless, online, manual)
+  - is_foreign_transaction:  integer — 1 if merchant is outside USA, else 0
+  - distance_from_home_km:   float   — distance between cardholder home and merchant (km)
+  - num_transactions_24h:    integer — number of transactions on this card in past 24 hours
+  - num_declined_7d:         integer — number of declined transactions in past 7 days
+  - avg_amount_30d:          float   — average transaction amount over past 30 days
+
+---
+
+Target Table:
+fraud_transactions
+
+Target Schema:
+Core:
+  - transaction_id:          string        — pass through, uniqueness enforced
+  - transaction_timestamp:   timestamp     — derived from "Time" (seconds → datetime)
+  - transaction_amount:      decimal(10,2) — validated, must be > 0
+  - is_fraud:                integer       — 0 or 1 only
+  - ingestion_timestamp:     timestamp     — pipeline execution time (system-generated)
+
+Account / Cardholder:
+  - account_id:              string  — pass through
+  - account_age_days:        integer — pass through
+  - credit_limit:            decimal(10,2)
+  - account_balance:         decimal(10,2) — nulls handled per cleaning rules
+  - cardholder_age:          integer — validated (must be 18-110)
+  - cardholder_city:         string
+  - cardholder_state:        string — 2-letter uppercase code
+  - cardholder_zip:          string
+
+Merchant:
+  - merchant_id:             string
+  - merchant_name:           string — blanks handled per cleaning rules
+  - merchant_category:       string — standardized to lowercase
+  - merchant_city:           string
+  - merchant_state:          string — 2-letter uppercase code
+  - merchant_country:        string — standardized to ISO 2-letter code (e.g., "US")
+
+Transaction Context:
+  - channel:                 string — standardized to lowercase
+  - pos_entry_mode:          string — standardized to lowercase
+  - is_foreign_transaction:  integer (0 or 1)
+  - distance_from_home_km:   float  — validated, must be >= 0
+  - num_transactions_24h:    integer
+  - num_declined_7d:         integer
+  - avg_amount_30d:          decimal(10,2)
+
+Derived Columns:
+  - transaction_date:        date   — derived from transaction_timestamp (YYYY-MM-DD)
+  - transaction_hour:        integer — hour of transaction (0-23), derived from transaction_timestamp
+  - is_weekend:              integer — 1 if transaction falls on Saturday or Sunday, else 0
+  - amount_category:         string — derived from transaction_amount quantiles:
+                                        * low:     amount < 25th percentile
+                                        * medium:  25th ≤ amount < 75th percentile
+                                        * high:    75th ≤ amount < 95th percentile
+                                        * outlier: amount ≥ 95th percentile
+  - utilization_rate:        float  — account_balance / credit_limit (0.00-1.00)
+  - is_high_risk_context:    integer — 1 if is_foreign_transaction=1 OR num_declined_7d > 2
+                                            OR distance_from_home_km > 500, else 0
+
+---
+
+Transformation Requirements:
+
+1. Column Renaming & Mapping:
+   - "Time"   → transaction_timestamp (convert seconds → timestamp)
+   - "Amount" → transaction_amount
+   - "Class"  → is_fraud
+   - All other columns retain their names
+
+2. Timestamp Conversion:
+   - Reference start: 2020-01-01 00:00:00 UTC
+   - Formula: transaction_timestamp = reference_start + timedelta(seconds=Time)
+   - Output format: YYYY-MM-DD HH:MM:SS
+
+3. Data Cleaning (required):
+   a) Standardize merchant_country to ISO 2-letter codes:
+        "USA", "us", "U.S.", "United States" → "US"
+        All others pass through as-is
+   b) Replace blank merchant_name with NULL / "UNKNOWN"
+
+4. Data Filtering (optional — flag for review):
+   - Identify extreme outliers: amount_category = 'outlier' (~30 records expected)
+   - Identify records with NULL account_balance (~15 records expected);
+     decide: impute with median OR flag and exclude from balance-dependent analytics
+
+5. Type Standardization:
+   - transaction_amount, credit_limit, account_balance, avg_amount_30d → decimal(10,2)
+   - is_fraud, is_foreign_transaction, is_weekend, is_high_risk_context → int8 (0 or 1)
+   - cardholder_age, account_age_days, num_transactions_24h, num_declined_7d → int32
+   - distance_from_home_km, utilization_rate → float64
+   - All string/category columns → string (stripped of leading/trailing whitespace)
+
+---
+
+Data Quality Rules:
+- transaction_id must be unique and not null; format must match TXN_\d{6}
+- transaction_amount must be > 0
+- is_fraud must be exactly 0 or 1
+- cardholder_age must be between 18 and 110 (inclusive)
+- credit_limit must be > 0
+- distance_from_home_km must be >= 0
+- is_foreign_transaction must be 0 or 1
+- channel must be one of: in-store, online, atm
+- pos_entry_mode must be one of: chip, swipe, contactless, online, manual
+- merchant_category must be one of the known categories in the source system
+- No null values allowed in: transaction_id, transaction_timestamp, transaction_amount, is_fraud, account_id, merchant_id, channel
+
+Output Requirements:
+- Output location: data/processed/fraud_transactions.csv
+- Format: CSV with headers
+- All columns in the target schema must be present
+- All Priority 1 records must be removed before writing
+
+Validation Requirements:
+Generate a validation report (data/processed/validation_report.txt) including:
+  - total_records_input
+  - total_records_output
+  - records_with_imputed_account_balance
+  - records_with_unknown_merchant_name
+  - fraud_distribution: {legitimate: X, fraudulent: Y}
+  - amount_category_distribution: {low, medium, high, outlier}
+  - merchant_country_standardization: {before: distinct values, after: distinct values}
+  - pass/fail status for each data quality rule
+
+Pipeline must FAIL if:
+  - transaction_id uniqueness is violated in output
+  - Output record count is 0
+  - Any critical field contains null in output
+
+Testing Requirements:
+Automated tests must validate:
+  - All expected target columns are present with correct types
+  - transaction_id uniqueness
+  - is_fraud values are only 0 or 1
+  - transaction_amount > 0 for all records
+  - cardholder_age is within 18-110
+  - distance_from_home_km >= 0
+  - merchant_country contains only standardized ISO codes in output
+  - Derived column logic (amount_category, is_weekend, utilization_rate, is_high_risk_context)
+  - ingestion_timestamp is populated on all rows
+
+Output a test report (data/processed/test_report.txt) with pass/fail per test and failure details.

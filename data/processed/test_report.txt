@@ -1,0 +1,17 @@
+=== Test Report ===
+requirements_path: data/raw/requirements_document.txt
+source_data_path: data/raw/sample_transactions.csv
+processed_data_path: data/processed/fraud_transactions.csv
+generated_tests_output_path: outputs\generated_tests.py
+source_row_count: 1000
+row_count: 962
+all_passed: False
+
+--- Test Results ---
+FAIL | row_count_sanity | Source row count: 1000, Output row count: 962, Expected removals: 93, Observed removals: 38.
+PASS | expected_columns_present | Expected count: 32, Present count: 32, Missing: [], Rename coverage: {'Time': 'transaction_timestamp', 'Amount': 'transaction_amount', 'Class': 'is_fraud'}, Legacy names present: [].
+PASS | required_fields_not_null | Null counts for required fields: {'transaction_id': np.int64(0), 'transaction_timestamp': np.int64(0), 'transaction_amount': np.int64(0), 'is_fraud': np.int64(0), 'account_id': np.int64(0), 'merchant_id': np.int64(0), 'channel': np.int64(0)}.
+PASS | id_uniqueness | transaction_id uniqueness check.
+PASS | duplicate_rows_absent | Duplicate rows found: 0.
+PASS | numeric_type_coercion_success | Numeric type coercion check.
+PASS | timestamp_parse_success | Timestamp parsing check.
