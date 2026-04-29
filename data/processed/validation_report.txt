@@ -1,0 +1,23 @@
+=== Validation Report ===
+Generated at: 2026-03-29 21:13:10 UTC
+
+total_records_input:   1000
+total_records_output:  965
+total_records_removed: 35
+
+--- Filtering Counts ---
+  transaction_amount: 20
+  account_balance: 15
+
+--- Fraud Distribution (output) ---
+  legitimate (0): 935
+  fraudulent  (1): 30
+
+--- Amount Category Distribution ---
+  low: 241
+  medium: 482
+  high: 193
+  outlier: 49
+
+--- Schema Check ---
+  pass: True
