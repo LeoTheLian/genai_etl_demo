@@ -8,10 +8,10 @@ row_count: 965
 all_passed: False
 
 --- Test Results ---
-PASS | row_count_sanity | Source row count: 1000, Output row count: 965, Observed removed count: 35.
-PASS | expected_columns_present | Expected target count: 32, Present target count: 32, Missing target columns: [].
-PASS | required_fields_not_null | Null counts for required fields: {}.
-PASS | id_uniqueness | All transaction IDs are unique.
-PASS | duplicate_rows_absent | No duplicate rows found.
-FAIL | numeric_type_coercion_success | Numeric type coercion success check.
-PASS | timestamp_parse_success | All timestamps parsed successfully.
+PASS | expected_columns_present | Expected target count: 32, Present target count: 32, Missing target columns: set()
+FAIL | rename_mapping_applied | Rename coverage: {'Time': 'transaction_timestamp', 'Amount': 'transaction_amount', 'Class': 'is_fraud'}
+FAIL | timestamp_conversion_logic | Timestamp conversion logic failed.
+FAIL | merchant_country_standardization | Merchant country standardization failed.
+PASS | merchant_name_blank_handling | Blank merchant names handled correctly.
+FAIL | type_standardization_checks | Type standardization checks failed.
+PASS | output_schema_rowcount_sanity | Source row count: 1000, Output row count: 965, Removed count: 35

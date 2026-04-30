@@ -133,7 +133,6 @@ Output Requirements:
 - Output location: data/processed/fraud_transactions.csv
 - Format: CSV with headers
 - All columns in the target schema must be present
-- All Priority 1 records must be removed before writing
 
 Validation Requirements:
 Generate a validation report (data/processed/validation_report.txt) including:

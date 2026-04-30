@@ -6,10 +6,8 @@
     {
       "name": "transaction_id",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "Unique identifier for each transaction",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 1000,
       "sample_values": [
         "TXN_000000",
         "TXN_000001",
@@ -19,22 +17,13 @@
       ],
       "expected_transformations": [
         "validate_identifier_format"
-      ],
-      "top_values": {
-        "TXN_000000": 1,
-        "TXN_000001": 1,
-        "TXN_000002": 1,
-        "TXN_000003": 1,
-        "TXN_000004": 1
-      }
+      ]
     },
     {
       "name": "Time",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "Timestamp of the transaction in seconds",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 999,
       "sample_values": [
         121958,
         146867,
@@ -44,21 +33,13 @@
       ],
       "expected_transformations": [
         "convert_seconds_to_timestamp"
-      ],
-      "stats": {
-        "min": 235,
-        "max": 172627,
-        "mean": 86194.539,
-        "median": 89361.5
-      }
+      ]
     },
     {
       "name": "Amount",
       "dtype": "float64",
-      "null_count": 0,
+      "business_meaning": "Monetary amount of the transaction",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 1000,
       "sample_values": [
         22.80044394438993,
         856.8647617570308,
@@ -71,21 +52,13 @@
         "flag_outliers",
         "rename_to_transaction_amount",
         "cast_to_decimal_10_2"
-      ],
-      "stats": {
-        "min": -900.559140496494,
-        "max": 46639.7800401658,
-        "mean": 1309.8486906629778,
-        "median": 350.3261714406183
-      }
+      ]
     },
     {
       "name": "Class",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "Indicates if the transaction is fraudulent (1) or not (0)",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 2,
       "sample_values": [
         0,
         0,
@@ -96,21 +69,13 @@
       "expected_transformations": [
         "rename_to_is_fraud",
         "validate_binary_values"
-      ],
-      "stats": {
-        "min": 0,
-        "max": 1,
-        "mean": 0.031,
-        "median": 0.0
-      }
+      ]
     },
     {
       "name": "account_id",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "Unique identifier for the account associated with the transaction",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 1000,
       "sample_values": [
         "ACC_614241",
         "ACC_987099",
@@ -120,22 +85,13 @@
       ],
       "expected_transformations": [
         "validate_identifier_format"
-      ],
-      "top_values": {
-        "ACC_614241": 1,
-        "ACC_987099": 1,
-        "ACC_452215": 1,
-        "ACC_198064": 1,
-        "ACC_468655": 1
-      }
+      ]
     },
     {
       "name": "account_age_days",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "Age of the account in days",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 908,
       "sample_values": [
         2211,
         3227,
@@ -145,21 +101,13 @@
       ],
       "expected_transformations": [
         "validate_reasonable_age_range"
-      ],
-      "stats": {
-        "min": 31,
-        "max": 4999,
-        "mean": 2491.344,
-        "median": 2597.5
-      }
+      ]
     },
     {
       "name": "credit_limit",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "Maximum credit limit for the account",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 7,
       "sample_values": [
         15000,
         10000,
@@ -167,21 +115,13 @@
         25000,
         15000
       ],
-      "expected_transformations": [],
-      "stats": {
-        "min": 1000,
-        "max": 50000,
-        "mean": 14804.0,
-        "median": 10000.0
-      }
+      "expected_transformations": []
     },
     {
       "name": "account_balance",
       "dtype": "float64",
-      "null_count": 15,
+      "business_meaning": "Current balance of the account",
       "null_pct": 0.015,
-      "non_null_count": 985,
-      "distinct_count": 985,
       "sample_values": [
         12865.869333908138,
         6619.170741886341,
@@ -191,21 +131,13 @@
       ],
       "expected_transformations": [
         "handle_nulls"
-      ],
-      "stats": {
-        "min": 6.023365348578668,
-        "max": 47060.568446177895,
-        "mean": 7031.200819483646,
-        "median": 3193.3425994374725
-      }
+      ]
     },
     {
       "name": "cardholder_age",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "Age of the cardholder",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 57,
       "sample_values": [
         56,
         40,
@@ -216,21 +148,13 @@
       "expected_transformations": [
         "flag_outliers",
         "validate_reasonable_age_range"
-      ],
-      "stats": {
-        "min": 0,
-        "max": 999,
-        "mean": 48.274,
-        "median": 46.0
-      }
+      ]
     },
     {
       "name": "cardholder_city",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "City where the cardholder resides",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 179,
       "sample_values": [
         "City_TX_7",
         "City_AZ_8",
@@ -238,22 +162,13 @@
         "City_IL_3",
         "City_AZ_7"
       ],
-      "expected_transformations": [],
-      "top_values": {
-        "City_TN_8": 14,
-        "City_WA_8": 12,
-        "City_TX_6": 11,
-        "City_FL_4": 10,
-        "City_WA_3": 10
-      }
+      "expected_transformations": []
     },
     {
       "name": "cardholder_state",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "State where the cardholder resides",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 20,
       "sample_values": [
         "TX",
         "AZ",
@@ -263,22 +178,13 @@
       ],
       "expected_transformations": [
         "uppercase_state_code"
-      ],
-      "top_values": {
-        "MD": 64,
-        "TN": 63,
-        "MI": 57,
-        "WA": 57,
-        "FL": 53
-      }
+      ]
     },
     {
       "name": "cardholder_zip",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "ZIP code of the cardholder's address",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 998,
       "sample_values": [
         85287,
         16907,
@@ -286,21 +192,13 @@
         35009,
         94846
       ],
-      "expected_transformations": [],
-      "stats": {
-        "min": 10015,
-        "max": 99882,
-        "mean": 53803.712,
-        "median": 52962.0
-      }
+      "expected_transformations": []
     },
     {
       "name": "merchant_id",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "Unique identifier for the merchant",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 994,
       "sample_values": [
         "MER_18724",
         "MER_15084",
@@ -310,22 +208,13 @@
       ],
       "expected_transformations": [
         "validate_identifier_format"
-      ],
-      "top_values": {
-        "MER_58402": 2,
-        "MER_88872": 2,
-        "MER_38390": 2,
-        "MER_13936": 2,
-        "MER_83511": 2
-      }
+      ]
     },
     {
       "name": "merchant_name",
       "dtype": "object",
-      "null_count": 10,
+      "business_meaning": "Name of the merchant",
       "null_pct": 0.01,
-      "non_null_count": 990,
-      "distinct_count": 50,
       "sample_values": [
         "Holiday Inn",
         "AMC Theatres",
@@ -335,22 +224,13 @@
       ],
       "expected_transformations": [
         "handle_nulls"
-      ],
-      "top_values": {
-        "Starbucks": 29,
-        "Duane Reade": 27,
-        "Expedia": 27,
-        "AT&T": 27,
-        "Holiday Inn": 26
-      }
+      ]
     },
     {
       "name": "merchant_category",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "Category of the merchant",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 10,
       "sample_values": [
         "hotel",
         "entertainment",
@@ -358,22 +238,13 @@
         "pharmacy",
         "online_retail"
       ],
-      "expected_transformations": [],
-      "top_values": {
-        "pharmacy": 112,
-        "hotel": 108,
-        "healthcare": 106,
-        "online_retail": 106,
-        "gas_station": 104
-      }
+      "expected_transformations": []
     },
     {
       "name": "merchant_city",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "City where the merchant is located",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 178,
       "sample_values": [
         "City_MD_4",
         "City_MI_9",
@@ -381,22 +252,13 @@
         "City_MD_6",
         "City_NJ_2"
       ],
-      "expected_transformations": [],
-      "top_values": {
-        "City_MA_2": 12,
-        "City_FL_2": 12,
-        "City_MI_3": 11,
-        "City_CO_2": 11,
-        "City_MA_8": 11
-      }
+      "expected_transformations": []
     },
     {
       "name": "merchant_state",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "State where the merchant is located",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 20,
       "sample_values": [
         "MD",
         "MI",
@@ -406,22 +268,13 @@
       ],
       "expected_transformations": [
         "uppercase_state_code"
-      ],
-      "top_values": {
-        "MA": 72,
-        "CO": 64,
-        "IN": 55,
-        "PA": 54,
-        "NY": 53
-      }
+      ]
     },
     {
       "name": "merchant_country",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "Country where the merchant is located",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 10,
       "sample_values": [
         "U.S.",
         "United States",
@@ -431,22 +284,13 @@
       ],
       "expected_transformations": [
         "standardize_country_code"
-      ],
-      "top_values": {
-        "USA": 205,
-        "U.S.": 195,
-        "US": 186,
-        "us": 176,
-        "United States": 171
-      }
+      ]
     },
     {
       "name": "channel",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "Channel through which the transaction was made",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 3,
       "sample_values": [
         "online",
         "atm",
@@ -454,20 +298,13 @@
         "in-store",
         "in-store"
       ],
-      "expected_transformations": [],
-      "top_values": {
-        "in-store": 519,
-        "online": 426,
-        "atm": 55
-      }
+      "expected_transformations": []
     },
     {
       "name": "pos_entry_mode",
       "dtype": "object",
-      "null_count": 0,
+      "business_meaning": "Method used to enter the transaction",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 5,
       "sample_values": [
         "online",
         "manual",
@@ -475,22 +312,13 @@
         "swipe",
         "swipe"
       ],
-      "expected_transformations": [],
-      "top_values": {
-        "online": 426,
-        "chip": 181,
-        "swipe": 171,
-        "contactless": 167,
-        "manual": 55
-      }
+      "expected_transformations": []
     },
     {
       "name": "is_foreign_transaction",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "Indicates if the transaction is foreign (1) or domestic (0)",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 2,
       "sample_values": [
         0,
         0,
@@ -498,21 +326,13 @@
         0,
         0
       ],
-      "expected_transformations": [],
-      "stats": {
-        "min": 0,
-        "max": 1,
-        "mean": 0.067,
-        "median": 0.0
-      }
+      "expected_transformations": []
     },
     {
       "name": "distance_from_home_km",
       "dtype": "float64",
-      "null_count": 0,
+      "business_meaning": "Distance from the cardholder's home to the transaction location in kilometers",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 1000,
       "sample_values": [
         95.89205660454007,
         29.96586411462937,
@@ -522,21 +342,13 @@
       ],
       "expected_transformations": [
         "validate_non_negative"
-      ],
-      "stats": {
-        "min": -183.5763969201774,
-        "max": 202.3661513202775,
-        "mean": 24.01481983756201,
-        "median": 16.69937872403314
-      }
+      ]
     },
     {
       "name": "num_transactions_24h",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "Number of transactions made in the last 24 hours",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 10,
       "sample_values": [
         3,
         6,
@@ -544,21 +356,13 @@
         5,
         2
       ],
-      "expected_transformations": [],
-      "stats": {
-        "min": 0,
-        "max": 10,
-        "mean": 3.014,
-        "median": 3.0
-      }
+      "expected_transformations": []
     },
     {
       "name": "num_declined_7d",
       "dtype": "int64",
-      "null_count": 0,
+      "business_meaning": "Number of declined transactions in the last 7 days",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 4,
       "sample_values": [
         0,
         0,
@@ -566,21 +370,13 @@
         0,
         1
       ],
-      "expected_transformations": [],
-      "stats": {
-        "min": 0,
-        "max": 3,
-        "mean": 0.308,
-        "median": 0.0
-      }
+      "expected_transformations": []
     },
     {
       "name": "avg_amount_30d",
       "dtype": "float64",
-      "null_count": 0,
+      "business_meaning": "Average transaction amount over the last 30 days",
       "null_pct": 0.0,
-      "non_null_count": 1000,
-      "distinct_count": 1000,
       "sample_values": [
         229.1206717137025,
         397.6935272166486,
@@ -588,13 +384,7 @@
         50.35153359808707,
         148.344602996922
       ],
-      "expected_transformations": [],
-      "stats": {
-        "min": 9.705625271128577,
-        "max": 1042.3022914697874,
-        "mean": 233.80763331375624,
-        "median": 193.52812739115433
-      }
+      "expected_transformations": []
     }
   ]
 }
