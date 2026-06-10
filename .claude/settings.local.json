@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p docs)",
+      "Bash(python generate_diagram.py)",
+      "Bash(pip install *)"
+    ]
+  }
+}

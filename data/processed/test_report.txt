@@ -9,9 +9,9 @@ all_passed: False
 
 --- Test Results ---
 PASS | expected_columns_present | Expected target count: 32, Present target count: 32, Missing target columns: set()
-FAIL | rename_mapping_applied | Rename coverage: {'Time': 'transaction_timestamp', 'Amount': 'transaction_amount', 'Class': 'is_fraud'}
-FAIL | timestamp_conversion_logic | Timestamp conversion logic failed.
-FAIL | merchant_country_standardization | Merchant country standardization failed.
-PASS | merchant_name_blank_handling | Blank merchant names handled correctly.
-FAIL | type_standardization_checks | Type standardization checks failed.
+PASS | rename_mapping_applied | Rename coverage: {'Time': 'transaction_timestamp', 'Amount': 'transaction_amount', 'Class': 'is_fraud'}
+PASS | timestamp_conversion_logic | All timestamps are valid and within the plausible range.
+PASS | merchant_country_standardization | All merchant countries are standardized.
+FAIL | merchant_name_blank_handling | Blank merchant names are handled correctly.
+FAIL | type_standardization_checks | Type validation results: {'transaction_amount': True, 'credit_limit': False, 'account_balance': True, 'avg_amount_30d': True, 'distance_from_home_km': True, 'is_fraud': False, 'is_foreign_transaction': False, 'is_weekend': False, 'is_high_risk_context': False, 'cardholder_age': False, 'account_age_days': False, 'num_transactions_24h': False, 'num_declined_7d': False}
 PASS | output_schema_rowcount_sanity | Source row count: 1000, Output row count: 965, Removed count: 35

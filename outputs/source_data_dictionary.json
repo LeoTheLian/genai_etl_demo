@@ -106,7 +106,7 @@
     {
       "name": "credit_limit",
       "dtype": "int64",
-      "business_meaning": "Maximum credit limit for the account",
+      "business_meaning": "Credit limit assigned to the account",
       "null_pct": 0.0,
       "sample_values": [
         15000,
@@ -121,7 +121,7 @@
       "name": "account_balance",
       "dtype": "float64",
       "business_meaning": "Current balance of the account",
-      "null_pct": 0.015,
+      "null_pct": 1.5,
       "sample_values": [
         12865.869333908138,
         6619.170741886341,
@@ -153,7 +153,7 @@
     {
       "name": "cardholder_city",
       "dtype": "object",
-      "business_meaning": "City where the cardholder resides",
+      "business_meaning": "City of the cardholder",
       "null_pct": 0.0,
       "sample_values": [
         "City_TX_7",
@@ -167,7 +167,7 @@
     {
       "name": "cardholder_state",
       "dtype": "object",
-      "business_meaning": "State where the cardholder resides",
+      "business_meaning": "State of the cardholder",
       "null_pct": 0.0,
       "sample_values": [
         "TX",
@@ -183,7 +183,7 @@
     {
       "name": "cardholder_zip",
       "dtype": "int64",
-      "business_meaning": "ZIP code of the cardholder's address",
+      "business_meaning": "ZIP code of the cardholder",
       "null_pct": 0.0,
       "sample_values": [
         85287,
@@ -214,7 +214,7 @@
       "name": "merchant_name",
       "dtype": "object",
       "business_meaning": "Name of the merchant",
-      "null_pct": 0.01,
+      "null_pct": 1.0,
       "sample_values": [
         "Holiday Inn",
         "AMC Theatres",
@@ -243,7 +243,7 @@
     {
       "name": "merchant_city",
       "dtype": "object",
-      "business_meaning": "City where the merchant is located",
+      "business_meaning": "City of the merchant",
       "null_pct": 0.0,
       "sample_values": [
         "City_MD_4",
@@ -257,7 +257,7 @@
     {
       "name": "merchant_state",
       "dtype": "object",
-      "business_meaning": "State where the merchant is located",
+      "business_meaning": "State of the merchant",
       "null_pct": 0.0,
       "sample_values": [
         "MD",
@@ -273,7 +273,7 @@
     {
       "name": "merchant_country",
       "dtype": "object",
-      "business_meaning": "Country where the merchant is located",
+      "business_meaning": "Country of the merchant",
       "null_pct": 0.0,
       "sample_values": [
         "U.S.",

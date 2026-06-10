@@ -1,14 +1,13 @@
 === Validation Report ===
-Generated at: 2026-04-29 19:42:39 UTC
+Generated at: 2026-06-10 15:01:40 UTC
 
 total_records_input:   1000
 total_records_output:  965
 total_records_removed: 35
 
 --- Filtering Counts ---
-  transaction_amount: 20
-  transaction_amount_positive: 0
-  account_balance: 15
+  non_negative_transaction_amount: 20
+  not_null_account_balance: 15
 
 --- Fraud Distribution (output) ---
   legitimate (0): 935

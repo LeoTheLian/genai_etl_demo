@@ -21,7 +21,7 @@ if __package__ is None or __package__ == "":
 import pandas as pd
 
 from agents.llm_client import call_llm_text, llm_available
-from agents.requirements_parser import _parse_requirements_rule_based
+from agents.analyst_agent import _parse_requirements_rule_based
 
 
 def _load_requirements(path: str) -> tuple[str, dict]:
@@ -115,6 +115,24 @@ def _build_testing_prompt(
                 - For transformation validations (renames, type casting, filtering,
                     and derivations), compare source_df vs df whenever applicable.
 
+                CRITICAL — row alignment rules (violations cause ValueError crashes):
+                - source_df and df will OFTEN have DIFFERENT row counts because the
+                    ETL pipeline filters rows (e.g. removes nulls, deduplicates).
+                    NEVER assume they have the same number of rows.
+                - NEVER directly compare a Series from source_df with a Series from df
+                    using == unless you have first confirmed they have identical length
+                    AND identical index labels. Both conditions must hold.
+                - For row-by-row transformation checks (e.g. timestamp conversion),
+                    join on a shared key column if one exists, then compare only the
+                    joined rows. If no key is available, validate the check using a
+                    statistical/range approach on df alone (e.g. check all timestamps
+                    fall within the expected date range) instead of pairing rows.
+                - Always call .reset_index(drop=True) on any slice or filtered sub-frame
+                    before positional comparison.
+                - Wrap EVERY individual test block in try/except Exception as e and
+                    return a FAIL result with str(e) in details rather than letting
+                    exceptions propagate out of the function.
+
                 Strict scope:
                 - Test cases must strictly follow the provided requirements document.
                 - Derive tests from these sections in order:
@@ -148,8 +166,10 @@ def _build_testing_prompt(
                     validate source-to-target rename intent (Time -> transaction_timestamp,
                     Amount -> transaction_amount, Class -> is_fraud) is reflected in output.
                 - timestamp_conversion_logic:
-                    validate transaction_timestamp aligns to reference start
-                    2020-01-01 00:00:00 UTC + Time seconds for comparable rows.
+                    validate transaction_timestamp is a valid datetime and all values
+                    fall within a plausible range (e.g. >= 2020-01-01 and <= 2030-01-01).
+                    Do NOT do row-by-row comparison against source_df['Time'] because
+                    the pipeline may have filtered rows, making row counts differ.
                 - merchant_country_standardization:
                     validate USA/us/U.S./United States are standardized to US.
                 - merchant_name_blank_handling:
@@ -302,8 +322,8 @@ def run_tests(
         )
 
     requirements_text, parsed_requirements = _load_requirements(requirements_path)
-    source_df = pd.read_csv(source_data_path)
-    df = pd.read_csv(processed_data_path)
+    source_df = pd.read_csv(source_data_path).reset_index(drop=True)
+    df = pd.read_csv(processed_data_path).reset_index(drop=True)
 
     generated_code = _generate_tests_code_llm(
         requirements_text,

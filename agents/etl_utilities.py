@@ -88,31 +88,26 @@ def cast_column(df: pd.DataFrame, column: str, target_type: str) -> pd.DataFrame
     return df
 
 
-def impute_nulls(df: pd.DataFrame, column: str, strategy: str = "median") -> pd.DataFrame:
-    df = df.copy()
+def impute_nulls(df: pd.DataFrame, column: str, strategy: str = "median") -> pd.Series:
     if strategy == "median":
-        df[column] = df[column].fillna(df[column].median())
+        return df[column].fillna(df[column].median())
     elif strategy == "mean":
-        df[column] = df[column].fillna(df[column].mean())
+        return df[column].fillna(df[column].mean())
     elif strategy == "zero":
-        df[column] = df[column].fillna(0)
-    return df
+        return df[column].fillna(0)
+    return df[column]
 
 
-def replace_blank_with(df: pd.DataFrame, column: str, replacement: str = "UNKNOWN") -> pd.DataFrame:
-    df = df.copy()
+def replace_blank_with(df: pd.DataFrame, column: str, replacement: str = "UNKNOWN") -> pd.Series:
     normalized = df[column].astype("string").str.strip()
-    df[column] = normalized.mask(normalized == "", replacement).fillna(replacement)
-    return df
+    return normalized.mask(normalized == "", replacement).fillna(replacement)
 
 
-def standardize_country_codes(df: pd.DataFrame, column: str, country_map: dict = None) -> pd.DataFrame:
-    df = df.copy()
+def standardize_country_codes(df: pd.DataFrame, column: str, country_map: dict = None) -> pd.Series:
     mapping = country_map or COUNTRY_STANDARD_MAP
-    df[column] = df[column].apply(
+    return df[column].apply(
         lambda v: mapping.get(str(v).lower().strip(), str(v).strip()) if pd.notna(v) else v
     )
-    return df
 
 
 def convert_seconds_to_timestamp(

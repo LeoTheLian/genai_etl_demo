@@ -24,36 +24,28 @@ The system consists of specialized AI agents that work together to automate ETL 
 
 ### Core Agents
 
-#### 1. Requirements Parser Agent (`agents/requirements_parser.py`)
-- **Purpose**: Parses natural language requirements documents into structured source-to-target mappings
-- **Input**: Requirements document (`data/raw/requirements_document.txt`)
-- **Output**: Source-to-target mapping JSON (`outputs/source_to_target_mapping.json`)
+#### 1. Analyst Agent (`agents/analyst_agent.py`)
+- **Purpose**: Analyzes requirements documents and source CSV data to produce source-to-target mappings and a data dictionary in a single consolidated call
+- **Input**: Requirements document (`data/raw/requirements_document.txt`), source CSV (`data/raw/sample_transactions.csv`)
+- **Output**: Source-to-target mapping JSON (`outputs/source_to_target_mapping.json`), data dictionary JSON (`outputs/source_data_dictionary.json`)
 - **Capabilities**:
   - Extracts schema definitions from unstructured text
   - Identifies column mappings and transformations
+  - Profiles source data for column statistics and metadata
   - Supports both LLM-enhanced and rule-based parsing modes
 
-#### 2. Data Profiler Agent (`agents/data_profiler.py`)
-- **Purpose**: Analyzes source data structure and generates enriched data dictionaries
-- **Input**: Source CSV file (`data/raw/sample_transactions.csv`)
-- **Output**: Data dictionary JSON (`outputs/source_data_dictionary.json`)
-- **Capabilities**:
-  - Statistical profiling of all columns
-  - Automatic transformation suggestions
-  - LLM-enhanced business meaning inference
-  - Data quality assessment
-
-#### 3. Developer Agent (`agents/developer_agent.py`)
-- **Purpose**: Generates executable ETL pipeline code from mappings and data profiles
-- **Input**: Source-to-target mapping and data dictionary
+#### 2. Developer Agent (`agents/developer_agent.py`)
+- **Purpose**: Generates executable ETL pipeline code from source-to-target mappings
+- **Input**: Source-to-target mapping JSON
 - **Output**: Executable Python script (`outputs/generated_pipeline.py`)
 - **Capabilities**:
   - LLM-only code generation using specialized prompts
   - Framework-agnostic pipeline creation (pandas/PySpark)
   - Integration with ETL utility functions
   - Automatic validation report generation
+  - Feedback-aware iterative regeneration using test results and versioned pipeline artifacts
 
-#### 4. Testing Agent (`agents/testing_agent.py`)
+#### 3. Testing Agent (`agents/testing_agent.py`)
 - **Purpose**: Generates and executes data quality tests against processed data
 - **Input**: Requirements, source data, and processed data
 - **Output**: Test report (`data/processed/test_report.txt`) and generated tests (`outputs/generated_tests.py`)
@@ -62,11 +54,12 @@ The system consists of specialized AI agents that work together to automate ETL 
   - Automated test execution and reporting
   - Schema validation and transformation verification
 
-#### 5. Orchestrator (`agents/orchestrator.py`)
+#### 4. Orchestrator (`agents/orchestrator.py`)
 - **Purpose**: Coordinates the entire ETL development workflow
 - **Capabilities**:
   - Sequential execution of all agents
   - Pipeline execution and validation
+  - Feedback loop orchestration: repeat pipeline generation, execution, and testing until all tests pass
   - Comprehensive status reporting
 
 ### Supporting Components
@@ -91,26 +84,21 @@ OpenAI API integration with:
 The complete ETL development process follows these steps:
 
 1. **Requirements Analysis**
-   - Parse requirements document
+   - Analyze requirements document
    - Generate source-to-target mapping
    - Extract transformation rules
 
-2. **Data Profiling**
-   - Analyze source data structure
-   - Generate statistical profiles
-   - Infer business meanings and transformations
-
-3. **Pipeline Generation**
+2. **Pipeline Generation**
    - Create executable ETL code
    - Apply transformations and validations
    - Generate validation reports
 
-4. **Pipeline Execution**
+3. **Pipeline Execution**
    - Run generated pipeline on source data
    - Produce processed output
    - Create validation summary
 
-5. **Quality Testing**
+4. **Quality Testing**
    - Generate comprehensive test suite
    - Execute tests against processed data
    - Produce detailed test reports
@@ -120,7 +108,7 @@ The complete ETL development process follows these steps:
 ```
 Requirements Document
         ↓
-Source-to-Target Mapping → Data Dictionary
+Source-to-Target Mapping
         ↓
 Generated Pipeline Code
         ↓
@@ -154,6 +142,9 @@ python agents/orchestrator.py
 # Run with PySpark framework
 python agents/orchestrator.py --framework pyspark
 
+# Run iterative improvement until tests pass
+python agents/orchestrator.py --iterate --max-iterations 5
+
 # Generate artifacts without execution
 python agents/orchestrator.py --skip-run
 ```
@@ -161,11 +152,8 @@ python agents/orchestrator.py --skip-run
 ### Individual Agent Usage
 
 ```bash
-# Parse requirements only
-python agents/requirements_parser.py
-
-# Profile data only
-python agents/data_profiler.py
+# Analyze requirements and data
+python agents/analyst_agent.py
 
 # Generate pipeline only
 python agents/developer_agent.py
@@ -192,12 +180,13 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 The workflow generates several artifacts:
 
 - `outputs/source_to_target_mapping.json`: Structured mapping definition
-- `outputs/source_data_dictionary.json`: Enriched data profile
 - `outputs/generated_pipeline.py`: Executable ETL code
 - `outputs/generated_tests.py`: Generated test suite
 - `data/processed/fraud_transactions.csv`: Cleaned output data
 - `data/processed/validation_report.txt`: Processing summary
 - `data/processed/test_report.txt`: Quality test results
+- `outputs/agent_activity_log.json`: Persistent activity log for agent events, iteration summaries, and retrievable prompts/outputs
+- `outputs/generated_pipeline_iteration_{n}.py`, `data/processed/test_report_iteration_{n}.txt`, `outputs/test_summary_iteration_{n}.json`: Versioned iteration artifacts when run with `--iterate`
 
 ## Configuration
 
