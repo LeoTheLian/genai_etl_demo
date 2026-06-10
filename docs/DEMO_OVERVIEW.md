@@ -11,7 +11,7 @@ This project demonstrates a **multi-agent AI system** that automatically generat
 
 ## Agent Architecture
 
-![Architecture Diagram](docs/architecture_diagram.png)
+![Architecture Diagram](architecture_diagram.png)
 
 ---
 

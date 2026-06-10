@@ -244,6 +244,6 @@ ax.text(9, 21.7, "GenAI ETL — Multi-Agent Architecture",
         color=C_TEXT)
 
 plt.tight_layout(pad=0.3)
-plt.savefig("docs/architecture_diagram.png", dpi=160, bbox_inches="tight",
+plt.savefig("architecture_diagram.png", dpi=160, bbox_inches="tight",
             facecolor=fig.get_facecolor())
-print("Saved docs/architecture_diagram.png")
+print("Saved architecture_diagram.png")
