@@ -1,14 +1,22 @@
 def generate_test_results(source_df, df, parsed_requirements):
     results = []
-    
+
     try:
         expected_columns = {col['name'] for col in parsed_requirements['target_columns']}
         present_columns = set(df.columns)
         missing_columns = expected_columns - present_columns
+        expected_target_count = len(expected_columns)
+        present_target_count = len(present_columns)
+        rename_coverage = {src: tgt for src, tgt in parsed_requirements['rename_rules'].items() if src != tgt}
+        rename_pass = all(tgt in present_columns and src not in present_columns for src, tgt in rename_coverage.items())
+        legacy_source_names = {col['name'] for col in parsed_requirements['source_columns'] if col['name'] in present_columns}
+
         results.append({
             'name': 'expected_columns_present',
             'passed': len(missing_columns) == 0,
-            'details': f"Expected target count: {len(expected_columns)}, Present target count: {len(present_columns)}, Missing target columns: {missing_columns}"
+            'details': f"Expected target count: {expected_target_count}, Present target count: {present_target_count}, "
+                       f"Missing target columns: {missing_columns}, Rename coverage: {rename_pass}, "
+                       f"Legacy source names still present: {legacy_source_names}"
         })
     except Exception as e:
         results.append({
@@ -18,12 +26,12 @@ def generate_test_results(source_df, df, parsed_requirements):
         })
 
     try:
-        rename_mapping = parsed_requirements['rename_rules']
-        rename_coverage = {source: target for source, target in rename_mapping.items() if source in source_df.columns}
+        actual_renames = {src: tgt for src, tgt in parsed_requirements['rename_rules'].items() if src != tgt}
+        rename_pass = all(tgt in df.columns and src not in df.columns for src, tgt in actual_renames.items())
         results.append({
             'name': 'rename_mapping_applied',
-            'passed': all(col in df.columns for col in rename_coverage.values()),
-            'details': f"Rename coverage: {rename_coverage}"
+            'passed': rename_pass,
+            'details': f"Rename mapping applied: {rename_pass}"
         })
     except Exception as e:
         results.append({
@@ -33,14 +41,12 @@ def generate_test_results(source_df, df, parsed_requirements):
         })
 
     try:
-        timestamp_col = 'transaction_timestamp'
-        valid_timestamps = pd.to_datetime(df[timestamp_col], errors='coerce')
-        plausible_range = (pd.Timestamp('2020-01-01'), pd.Timestamp('2030-01-01'))
-        all_valid = valid_timestamps.notna().all() and valid_timestamps.between(plausible_range[0], plausible_range[1]).all()
+        timestamp_valid = pd.to_datetime(df['transaction_timestamp'], errors='coerce')
+        valid_range = (timestamp_valid >= '2020-01-01') & (timestamp_valid <= '2030-01-01')
         results.append({
             'name': 'timestamp_conversion_logic',
-            'passed': all_valid,
-            'details': "All timestamps are valid and within the plausible range."
+            'passed': valid_range.all(),
+            'details': f"All timestamps valid: {valid_range.all()}"
         })
     except Exception as e:
         results.append({
@@ -50,13 +56,12 @@ def generate_test_results(source_df, df, parsed_requirements):
         })
 
     try:
-        standardized_countries = {'USA': 'US', 'us': 'US', 'U.S.': 'US', 'United States': 'US'}
-        df['merchant_country_standardized'] = df['merchant_country'].replace(standardized_countries)
-        all_standardized = df['merchant_country_standardized'].notna().all()
+        raw_variants = ['USA', 'us', 'U.S.', 'United States']
+        contains_variants = df['merchant_country'].isin(raw_variants).any()
         results.append({
             'name': 'merchant_country_standardization',
-            'passed': all_standardized,
-            'details': "All merchant countries are standardized."
+            'passed': not contains_variants,
+            'details': f"Contains raw variants: {contains_variants}"
         })
     except Exception as e:
         results.append({
@@ -66,12 +71,11 @@ def generate_test_results(source_df, df, parsed_requirements):
         })
 
     try:
-        blank_handling = df['merchant_name'].replace('', 'UNKNOWN')
-        all_handled = (blank_handling == 'UNKNOWN').sum() == (df['merchant_name'] == '').sum()
+        blank_names = (df['merchant_name'].str.strip() == '').sum()
         results.append({
             'name': 'merchant_name_blank_handling',
-            'passed': all_handled,
-            'details': "Blank merchant names are handled correctly."
+            'passed': blank_names == 0,
+            'details': f"Blank merchant names count: {blank_names}"
         })
     except Exception as e:
         results.append({
@@ -82,26 +86,25 @@ def generate_test_results(source_df, df, parsed_requirements):
 
     try:
         type_checks = {
-            'transaction_amount': 'float64',
-            'credit_limit': 'float64',
-            'account_balance': 'float64',
-            'avg_amount_30d': 'float64',
-            'distance_from_home_km': 'float64',
-            'is_fraud': 'int32',
-            'is_foreign_transaction': 'int32',
-            'is_weekend': 'int32',
-            'is_high_risk_context': 'int32',
-            'cardholder_age': 'int32',
-            'account_age_days': 'int32',
-            'num_transactions_24h': 'int32',
-            'num_declined_7d': 'int32'
+            'transaction_amount': pd.api.types.is_float_dtype(df['transaction_amount']),
+            'credit_limit': pd.api.types.is_float_dtype(df['credit_limit']),
+            'account_balance': pd.api.types.is_float_dtype(df['account_balance']),
+            'avg_amount_30d': pd.api.types.is_float_dtype(df['avg_amount_30d']),
+            'distance_from_home_km': pd.api.types.is_float_dtype(df['distance_from_home_km']),
+            'is_fraud': pd.api.types.is_integer_dtype(df['is_fraud']),
+            'is_foreign_transaction': pd.api.types.is_integer_dtype(df['is_foreign_transaction']),
+            'is_weekend': pd.api.types.is_integer_dtype(df['is_weekend']),
+            'is_high_risk_context': pd.api.types.is_integer_dtype(df['is_high_risk_context']),
+            'cardholder_age': pd.api.types.is_integer_dtype(df['cardholder_age']),
+            'account_age_days': pd.api.types.is_integer_dtype(df['account_age_days']),
+            'num_transactions_24h': pd.api.types.is_integer_dtype(df['num_transactions_24h']),
+            'num_declined_7d': pd.api.types.is_integer_dtype(df['num_declined_7d']),
         }
-        type_validation = {col: df[col].dtype.name == expected for col, expected in type_checks.items() if col in df.columns}
-        all_types_correct = all(type_validation.values())
+        type_pass = all(type_checks.values())
         results.append({
             'name': 'type_standardization_checks',
-            'passed': all_types_correct,
-            'details': f"Type validation results: {type_validation}"
+            'passed': type_pass,
+            'details': f"Type checks passed: {type_pass}"
         })
     except Exception as e:
         results.append({

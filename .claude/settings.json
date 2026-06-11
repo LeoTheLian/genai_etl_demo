@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python agents/developer_agent.py --help)",
+      "Bash(python agents/tester_agent.py --help)",
+      "Bash(python agents/analyst_agent.py --help)"
+    ]
+  }
+}

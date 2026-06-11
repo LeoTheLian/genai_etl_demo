@@ -19,8 +19,10 @@ if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
-from agents.llm_client import call_llm_text, llm_available
+from agents.llm_client import llm_available, make_llm
 from agents.analyst_agent import _parse_requirements_rule_based
 
 
@@ -162,21 +164,53 @@ def _build_testing_prompt(
                 Required check mapping for the current requirements document:
                 - expected_columns_present:
                     validate all target schema columns exist in `df`.
+                    CRITICAL: `parsed_requirements['source_columns']` and
+                    `parsed_requirements['target_columns']` are LISTS OF DICTS like
+                    [{{"name": "col", "type": "...", "description": "..."}}].
+                    When building a set of column names you MUST use col['name']:
+                      expected_columns = {{col['name'] for col in parsed_requirements['target_columns']}}
+                      legacy_source_names = {{col['name'] for col in parsed_requirements['source_columns'] if ...}}
+                    NEVER do `{{col for col in parsed_requirements['source_columns']}}` —
+                    that adds dict objects to a set, causing TypeError: unhashable type: 'dict'.
                 - rename_mapping_applied:
                     validate source-to-target rename intent (Time -> transaction_timestamp,
                     Amount -> transaction_amount, Class -> is_fraud) is reflected in output.
+                    Use this EXACT approach — do NOT use column intersection counts:
+                      actual_renames = {{src: tgt for src, tgt in parsed_requirements['rename_rules'].items() if src != tgt}}
+                      rename_pass = all(
+                          tgt in df.columns and src not in df.columns
+                          for src, tgt in actual_renames.items()
+                      )
+                    The test passes when every target name IS in df.columns AND every
+                    source name is NOT in df.columns. Using set intersection produces
+                    wrong counts because pass-through columns appear in both DataFrames.
                 - timestamp_conversion_logic:
                     validate transaction_timestamp is a valid datetime and all values
                     fall within a plausible range (e.g. >= 2020-01-01 and <= 2030-01-01).
                     Do NOT do row-by-row comparison against source_df['Time'] because
                     the pipeline may have filtered rows, making row counts differ.
                 - merchant_country_standardization:
-                    validate USA/us/U.S./United States are standardized to US.
+                    Check that none of the raw variants ['USA', 'us', 'U.S.',
+                    'United States'] still appear in df['merchant_country'].
+                    Do NOT require that every value equals 'US' — non-US countries
+                    like 'CA', 'MX', 'GB', 'DE', 'FR' are valid pass-through values.
+                    The test passes when none of the four source variants remain.
                 - merchant_name_blank_handling:
-                    validate blank merchant_name values are handled as NULL or UNKNOWN.
+                    Check that df['merchant_name'] contains no BLANK strings (empty
+                    string '' or whitespace-only). Valid names like 'UNKNOWN', 'Amazon',
+                    etc. must NOT be flagged. A null/NaN value that has already been
+                    filled with 'UNKNOWN' is acceptable and must NOT be counted as
+                    blank. The test passes when (df['merchant_name'] == '').sum() == 0.
                 - type_standardization_checks:
-                    validate required target type families using pandas-compatible checks
-                    (numeric/integer/string/timestamp expectations).
+                    The DataFrame is loaded from a CSV file, so pandas infers types on
+                    read. NEVER check exact dtype strings like 'int32', 'Int64', or
+                    'int8'. CSV round-trip always produces int64 for integer columns
+                    regardless of how they were cast before saving.
+                    ALWAYS use pd.api.types helpers:
+                      - pd.api.types.is_integer_dtype(df[col]) for integer columns
+                      - pd.api.types.is_float_dtype(df[col])   for float/decimal columns
+                    This is the only correct way to validate type families after a
+                    CSV round-trip.
                 - output_schema_rowcount_sanity:
                     validate output has rows, and report source_row_count vs output_row_count.
 
@@ -215,24 +249,42 @@ def _build_testing_prompt(
     ).strip()
 
 
+_TESTER_SYSTEM_PROMPT = (
+    "You are a senior Python data-quality engineer. Generate tests strictly "
+    "from the provided requirements document. Return only Python code for "
+    "the requested function with no markdown."
+)
+
+
+def _strip_code_fences(text: str) -> str:
+    """Strip markdown fenced code block wrappers if present."""
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        start = 1
+        end = len(lines) - 1 if lines[-1].strip() == "```" else len(lines)
+        return "\n".join(lines[start:end]).strip()
+    return text
+
+
 def _generate_tests_code_llm(
     requirements_text: str,
     parsed_requirements: dict,
     source_df: pd.DataFrame,
     processed_df: pd.DataFrame,
 ) -> str:
-    system_prompt = (
-        "You are a senior Python data-quality engineer. Generate tests strictly "
-        "from the provided requirements document. Return only Python code for "
-        "the requested function with no markdown."
-    )
     user_prompt = _build_testing_prompt(
         requirements_text,
         parsed_requirements,
         source_df,
         processed_df,
     )
-    return call_llm_text(system_prompt=system_prompt, user_prompt=user_prompt)
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", _TESTER_SYSTEM_PROMPT),
+        ("human", "{user_prompt}"),
+    ])
+    chain = (prompt | make_llm() | StrOutputParser()).with_retry(stop_after_attempt=2)
+    return _strip_code_fences(chain.invoke({"user_prompt": user_prompt}))
 
 
 def _compile_generated_tests(code: str):

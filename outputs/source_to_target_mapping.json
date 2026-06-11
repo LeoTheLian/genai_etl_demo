@@ -141,12 +141,12 @@
     {
       "name": "transaction_amount",
       "type": "decimal(10,2)",
-      "description": "transaction amount"
+      "description": "transaction amount in USD"
     },
     {
       "name": "is_fraud",
       "type": "integer",
-      "description": "fraud label"
+      "description": "fraud label (1 = fraud, 0 = legitimate)"
     },
     {
       "name": "ingestion_timestamp",
@@ -156,7 +156,7 @@
     {
       "name": "account_id",
       "type": "string",
-      "description": "card account identifier"
+      "description": "card account identifier (format: ACC_XXXXXX)"
     },
     {
       "name": "account_age_days",
@@ -171,12 +171,12 @@
     {
       "name": "account_balance",
       "type": "decimal(10,2)",
-      "description": "current outstanding balance"
+      "description": "current outstanding balance (nullable)"
     },
     {
       "name": "cardholder_age",
       "type": "integer",
-      "description": "age of the cardholder"
+      "description": "age of the cardholder in years"
     },
     {
       "name": "cardholder_city",
@@ -186,7 +186,7 @@
     {
       "name": "cardholder_state",
       "type": "string",
-      "description": "cardholder's home state"
+      "description": "cardholder's home state (2-letter uppercase code)"
     },
     {
       "name": "cardholder_zip",
@@ -201,12 +201,12 @@
     {
       "name": "merchant_name",
       "type": "string",
-      "description": "legal merchant name"
+      "description": "legal merchant name (may be blank)"
     },
     {
       "name": "merchant_category",
       "type": "string",
-      "description": "merchant category"
+      "description": "merchant category (standardized to lowercase)"
     },
     {
       "name": "merchant_city",
@@ -216,55 +216,53 @@
     {
       "name": "merchant_state",
       "type": "string",
-      "description": "merchant location state"
+      "description": "merchant location state (2-letter uppercase code)"
     },
     {
       "name": "merchant_country",
       "type": "string",
-      "description": "merchant country"
+      "description": "merchant country (standardized to ISO 2-letter code)"
     },
     {
       "name": "channel",
       "type": "string",
-      "description": "transaction channel"
+      "description": "transaction channel (standardized to lowercase)"
     },
     {
       "name": "pos_entry_mode",
       "type": "string",
-      "description": "how card was entered"
+      "description": "how card was entered (standardized to lowercase)"
     },
     {
       "name": "is_foreign_transaction",
       "type": "integer",
-      "description": "foreign transaction indicator"
+      "description": "1 if merchant is outside USA, else 0"
     },
     {
       "name": "distance_from_home_km",
       "type": "float",
-      "description": "distance from home"
+      "description": "distance between cardholder home and merchant (km)"
     },
     {
       "name": "num_transactions_24h",
       "type": "integer",
-      "description": "transactions in past 24 hours"
+      "description": "number of transactions on this card in past 24 hours"
     },
     {
       "name": "num_declined_7d",
       "type": "integer",
-      "description": "declined transactions in past 7 days"
+      "description": "number of declined transactions in past 7 days"
     },
     {
       "name": "avg_amount_30d",
       "type": "decimal(10,2)",
-      "description": "average transaction amount"
+      "description": "average transaction amount over past 30 days"
     }
   ],
   "rename_rules": {
     "Time": "transaction_timestamp",
     "Amount": "transaction_amount",
-    "Class": "is_fraud",
-    "merchant_country": "merchant_country",
-    "merchant_name": "merchant_name"
+    "Class": "is_fraud"
   },
   "source_to_target_mapping": [
     {
@@ -289,7 +287,7 @@
       "target_type": "decimal(10,2)",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "transaction amount"
+      "description": "transaction amount in USD"
     },
     {
       "source_column": "Class",
@@ -297,7 +295,7 @@
       "target_type": "integer",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "fraud label"
+      "description": "fraud label (1 = fraud, 0 = legitimate)"
     },
     {
       "source_column": "account_id",
@@ -305,7 +303,7 @@
       "target_type": "string",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "card account identifier"
+      "description": "card account identifier (format: ACC_XXXXXX)"
     },
     {
       "source_column": "account_age_days",
@@ -329,7 +327,7 @@
       "target_type": "decimal(10,2)",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "current outstanding balance"
+      "description": "current outstanding balance (nullable)"
     },
     {
       "source_column": "cardholder_age",
@@ -337,7 +335,7 @@
       "target_type": "integer",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "age of the cardholder"
+      "description": "age of the cardholder in years"
     },
     {
       "source_column": "cardholder_city",
@@ -353,7 +351,7 @@
       "target_type": "string",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "cardholder's home state"
+      "description": "cardholder's home state (2-letter uppercase code)"
     },
     {
       "source_column": "cardholder_zip",
@@ -375,17 +373,17 @@
       "source_column": "merchant_name",
       "target_column": "merchant_name",
       "target_type": "string",
-      "mapping_type": "derived",
+      "mapping_type": "pass_through",
       "transformation": "replace blank with 'UNKNOWN'",
-      "description": "legal merchant name"
+      "description": "legal merchant name (may be blank)"
     },
     {
       "source_column": "merchant_category",
       "target_column": "merchant_category",
       "target_type": "string",
       "mapping_type": "pass_through",
-      "transformation": "",
-      "description": "merchant category"
+      "transformation": "standardized to lowercase",
+      "description": "merchant category (e.g., grocery, gas_station)"
     },
     {
       "source_column": "merchant_city",
@@ -401,31 +399,31 @@
       "target_type": "string",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "merchant location state"
+      "description": "merchant location state (2-letter uppercase code)"
     },
     {
       "source_column": "merchant_country",
       "target_column": "merchant_country",
       "target_type": "string",
       "mapping_type": "derived",
-      "transformation": "standardize to ISO 2-letter codes",
-      "description": "merchant country"
+      "transformation": "standardized to ISO 2-letter codes",
+      "description": "merchant country (inconsistently formatted)"
     },
     {
       "source_column": "channel",
       "target_column": "channel",
       "target_type": "string",
-      "mapping_type": "pass_through",
-      "transformation": "",
-      "description": "transaction channel"
+      "mapping_type": "derived",
+      "transformation": "standardized to lowercase",
+      "description": "transaction channel (in-store, online, atm)"
     },
     {
       "source_column": "pos_entry_mode",
       "target_column": "pos_entry_mode",
       "target_type": "string",
-      "mapping_type": "pass_through",
-      "transformation": "",
-      "description": "how card was entered"
+      "mapping_type": "derived",
+      "transformation": "standardized to lowercase",
+      "description": "how card was entered (chip, swipe, contactless, online, manual)"
     },
     {
       "source_column": "is_foreign_transaction",
@@ -433,7 +431,7 @@
       "target_type": "integer",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "foreign transaction indicator"
+      "description": "1 if merchant is outside USA, else 0"
     },
     {
       "source_column": "distance_from_home_km",
@@ -441,7 +439,7 @@
       "target_type": "float",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "distance from home"
+      "description": "distance between cardholder home and merchant (km)"
     },
     {
       "source_column": "num_transactions_24h",
@@ -449,7 +447,7 @@
       "target_type": "integer",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "transactions in past 24 hours"
+      "description": "number of transactions on this card in past 24 hours"
     },
     {
       "source_column": "num_declined_7d",
@@ -457,7 +455,7 @@
       "target_type": "integer",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "declined transactions in past 7 days"
+      "description": "number of declined transactions in past 7 days"
     },
     {
       "source_column": "avg_amount_30d",
@@ -465,7 +463,7 @@
       "target_type": "decimal(10,2)",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "average transaction amount"
+      "description": "average transaction amount over past 30 days"
     },
     {
       "source_column": null,
@@ -473,7 +471,7 @@
       "target_type": "date",
       "mapping_type": "derived",
       "transformation": "derived from transaction_timestamp (YYYY-MM-DD)",
-      "description": "derived transaction date"
+      "description": "derived from transaction_timestamp"
     },
     {
       "source_column": null,
@@ -481,7 +479,7 @@
       "target_type": "integer",
       "mapping_type": "derived",
       "transformation": "hour of transaction (0-23), derived from transaction_timestamp",
-      "description": "derived transaction hour"
+      "description": "derived from transaction_timestamp"
     },
     {
       "source_column": null,
@@ -489,7 +487,7 @@
       "target_type": "integer",
       "mapping_type": "derived",
       "transformation": "1 if transaction falls on Saturday or Sunday, else 0",
-      "description": "derived weekend indicator"
+      "description": "derived from transaction_timestamp"
     },
     {
       "source_column": null,
@@ -497,7 +495,7 @@
       "target_type": "string",
       "mapping_type": "derived",
       "transformation": "derived from transaction_amount quantiles",
-      "description": "derived amount category"
+      "description": "derived from transaction_amount"
     },
     {
       "source_column": null,
@@ -505,7 +503,7 @@
       "target_type": "float",
       "mapping_type": "derived",
       "transformation": "account_balance / credit_limit (0.00-1.00)",
-      "description": "derived utilization rate"
+      "description": "derived from account_balance and credit_limit"
     },
     {
       "source_column": null,
@@ -513,7 +511,7 @@
       "target_type": "integer",
       "mapping_type": "derived",
       "transformation": "1 if is_foreign_transaction=1 OR num_declined_7d > 2 OR distance_from_home_km > 500, else 0",
-      "description": "derived high risk context indicator"
+      "description": "derived from is_foreign_transaction, num_declined_7d, and distance_from_home_km"
     }
   ],
   "unmapped_source_columns": [],

@@ -1,12 +1,15 @@
 """
-Analyst Agent — consolidates data profiling and requirements parsing.
+Analyst Agent — parses requirements and produces a source-to-target mapping.
 
-This agent analyzes both the source CSV data and requirements document,
-generating both a data dictionary and source-to-target mapping in a single call.
+This agent reads the requirements document and generates the source-to-target
+mapping JSON that drives the downstream developer agent.
+
+Data profiling utilities (profile_data, build_data_dictionary) are still
+available as standalone functions for ad-hoc use.
 
 Usage:
   python agents/analyst_agent.py
-  python agents/analyst_agent.py --requirements data/raw/requirements_document.txt --input data/raw/sample_transactions.csv
+  python agents/analyst_agent.py --requirements data/raw/requirements_document.txt
   python agents/analyst_agent.py --no-llm
 """
 
@@ -21,8 +24,10 @@ if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
-from agents.llm_client import call_llm_json, llm_available
+from agents.llm_client import llm_available, make_llm
 
 
 # ---------------------------------------------------------------------------
@@ -167,17 +172,29 @@ def _build_profiler_prompt(profile):
     )
 
 
+_PROFILER_SYSTEM_PROMPT = (
+    "You are a data profiling assistant that produces concise, practical "
+    "JSON data dictionaries for downstream ETL mapping agents."
+)
+
+_REQUIREMENTS_SYSTEM_PROMPT = (
+    "You are a data engineering assistant that extracts deterministic "
+    "source-to-target mappings from requirements documents. "
+    "Always return strict JSON only."
+)
+
+
 def _llm_enrich_dictionary(profile):
     """Enrich data profile with LLM-generated business meanings and insights."""
-    system_prompt = (
-        "You are a data profiling assistant that produces concise, practical "
-        "JSON data dictionaries for downstream ETL mapping agents."
-    )
-    user_prompt = _build_profiler_prompt(profile)
-    llm_result = call_llm_json(system_prompt=system_prompt, user_prompt=user_prompt)
-    if "data_dictionary" not in llm_result:
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", _PROFILER_SYSTEM_PROMPT),
+        ("human", "{user_prompt}"),
+    ])
+    chain = prompt | make_llm() | JsonOutputParser()
+    result = chain.invoke({"user_prompt": _build_profiler_prompt(profile)})
+    if "data_dictionary" not in result:
         raise RuntimeError("LLM response missing data_dictionary")
-    return llm_result["data_dictionary"]
+    return result["data_dictionary"]
 
 
 def build_data_dictionary(file_path, output_path, use_llm=True):
@@ -289,7 +306,9 @@ def _extract_rename_rules(text):
     rename_rules = {}
     pattern = re.compile(r'\s*-\s*"([A-Za-z0-9_]+)"\s*→\s*([A-Za-z0-9_]+)')
     for m in pattern.finditer(text):
-        rename_rules[m.group(1)] = m.group(2)
+        source, target = m.group(1), m.group(2)
+        if source != target:  # skip identity mappings — they pollute rename_rules count
+            rename_rules[source] = target
     return rename_rules
 
 
@@ -448,14 +467,12 @@ def parse_requirements(text, use_llm=True):
     """Parse requirements text using LLM or deterministic fallback."""
     if use_llm and llm_available():
         try:
-            system_prompt = (
-                "You are a data engineering assistant that extracts deterministic "
-                "source-to-target mappings from requirements documents. "
-                "Always return strict JSON only."
-            )
-            user_prompt = _build_requirements_prompt(text)
-            parsed = call_llm_json(system_prompt=system_prompt, user_prompt=user_prompt)
-            # Minimal sanity checks before accepting LLM output
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", _REQUIREMENTS_SYSTEM_PROMPT),
+                ("human", "{user_prompt}"),
+            ])
+            chain = prompt | make_llm() | JsonOutputParser()
+            parsed = chain.invoke({"user_prompt": _build_requirements_prompt(text)})
             required_keys = {
                 "target_table",
                 "source_columns",
@@ -465,7 +482,6 @@ def parse_requirements(text, use_llm=True):
             if required_keys.issubset(set(parsed.keys())):
                 return parsed
         except Exception:
-            # Fall back to deterministic parser when LLM is unavailable or malformed.
             pass
 
     return _parse_requirements_rule_based(text)
@@ -489,48 +505,32 @@ def save_source_to_target_mapping(requirements_path, output_path, use_llm=True):
 
 def analyze_requirements_and_data(
     requirements_path,
-    source_csv_path,
     output_mapping_path,
-    output_dictionary_path,
     use_llm=True,
 ):
     """
-    Analyze both requirements document and source CSV data in a single call.
+    Parse requirements document and save source-to-target mapping JSON.
 
     Args:
         requirements_path: Path to requirements document
-        source_csv_path: Path to source CSV file
         output_mapping_path: Where to write source-to-target mapping JSON
-        output_dictionary_path: Where to write data dictionary JSON
-        use_llm: Whether to use LLM for enrichment
+        use_llm: Whether to use LLM for enrichment (falls back to rule-based)
 
     Returns:
         {
             "mapping": {...mapping dict...},
-            "dictionary": {...dictionary dict...},
             "mapping_output_path": str,
-            "dictionary_output_path": str
         }
     """
-    # Parse requirements and generate mapping
     mapping = save_source_to_target_mapping(
         requirements_path=requirements_path,
         output_path=output_mapping_path,
         use_llm=use_llm,
     )
 
-    # Profile data and generate dictionary
-    dictionary = build_data_dictionary(
-        file_path=source_csv_path,
-        output_path=output_dictionary_path,
-        use_llm=use_llm,
-    )
-
     return {
         "mapping": mapping,
-        "dictionary": dictionary,
         "mapping_output_path": str(output_mapping_path),
-        "dictionary_output_path": str(output_dictionary_path),
     }
 
 
@@ -540,10 +540,7 @@ def analyze_requirements_and_data(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description=(
-            "Analyst Agent: analyze requirements and data to generate mapping and "
-            "data dictionary in a single consolidated call."
-        )
+        description="Analyst Agent: parse requirements document and produce source-to-target mapping JSON."
     )
     parser.add_argument(
         "--requirements",
@@ -551,43 +548,26 @@ if __name__ == "__main__":
         help="Path to requirements document text file",
     )
     parser.add_argument(
-        "--input",
-        default="data/raw/sample_transactions.csv",
-        help="Input CSV path to profile",
-    )
-    parser.add_argument(
         "--output-mapping",
         default="outputs/source_to_target_mapping.json",
         help="Output path for source-to-target mapping JSON",
     )
     parser.add_argument(
-        "--output-dictionary",
-        default="outputs/source_data_dictionary.json",
-        help="Output path for data dictionary JSON",
-    )
-    parser.add_argument(
         "--no-llm",
         action="store_true",
-        help="Disable LLM calls and use deterministic analysis only",
+        help="Disable LLM calls and use deterministic rule-based parsing only",
     )
     args = parser.parse_args()
 
     result = analyze_requirements_and_data(
         requirements_path=args.requirements,
-        source_csv_path=args.input,
         output_mapping_path=args.output_mapping,
-        output_dictionary_path=args.output_dictionary,
         use_llm=not args.no_llm,
     )
 
     mapping = result["mapping"]
-    dictionary = result["dictionary"]
-
-    print(f"Generated mapping for target table: {mapping.get('target_table')}")
-    print(f"Source columns parsed: {len(mapping.get('source_columns', []))}")
-    print(f"Target columns parsed: {len(mapping.get('target_columns', []))}")
-    print(f"Mapping output: {result['mapping_output_path']}")
-    print()
-    print(f"Profiled dataset: {args.input}")
-    print(f"Rows: {dictionary['row_count']} | Columns: {dictionary['column_count']}")
-    print(f"Dictionary output: {result['dictionary_output_path']}")
+    print(f"Target table  : {mapping.get('target_table')}")
+    print(f"Source columns: {len(mapping.get('source_columns', []))}")
+    print(f"Target columns: {len(mapping.get('target_columns', []))}")
+    print(f"Mappings      : {len(mapping.get('source_to_target_mapping', []))}")
+    print(f"Output        : {result['mapping_output_path']}")
