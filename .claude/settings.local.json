@@ -4,7 +4,8 @@
       "Bash(mkdir -p docs)",
       "Bash(python generate_diagram.py)",
       "Bash(pip install *)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(python outputs/generated_pipeline.py)"
     ]
   }
 }
