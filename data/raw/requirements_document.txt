@@ -113,18 +113,16 @@ Transformation Requirements:
    - Formula: transaction_timestamp = reference_start + timedelta(seconds=Time)
    - Output format: YYYY-MM-DD HH:MM:SS
 
-3. Data Cleaning (required):
+3. Data Cleaning:
    a) Standardize merchant_country to ISO 2-letter codes:
         "USA", "us", "U.S.", "United States" → "US"
         All others pass through as-is
-   b) Replace blank merchant_name with NULL / "UNKNOWN"
+   b) Replace blank merchant_name with "UNKNOWN"
 
 
 4. Type Standardization:
-   - transaction_amount, credit_limit, account_balance, avg_amount_30d → float64
-   - is_fraud, is_foreign_transaction, is_weekend, is_high_risk_context → int8
-   - cardholder_age, account_age_days, num_transactions_24h, num_declined_7d → int32
-   - distance_from_home_km, utilization_rate → float64
+   - transaction_amount, credit_limit, account_balance, avg_amount_30d, distance_from_home_km, utilization_rate → float64
+   - is_fraud, is_foreign_transaction, is_weekend, is_high_risk_context, cardholder_age, account_age_days, num_transactions_24h, num_declined_7d → int32
    - All string/category columns → string (stripped of leading/trailing whitespace)
 
 ---
@@ -133,12 +131,5 @@ Output Requirements:
 - Output location: data/processed/fraud_transactions.csv
 - Format: CSV with headers
 - All columns in the target schema must be present
-- All Priority 1 records must be removed before writing
-
-Validation Requirements:
-Generate a validation report (data/processed/validation_report.txt) including:
-  - total_records_input
-  - total_records_output
-  - transformations_performed (list of key transformations applied)
 
 

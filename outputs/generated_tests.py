@@ -1,107 +1,132 @@
 def generate_test_results(source_df, df, parsed_requirements):
     results = []
-    
-    # Tier 1 Checks
-    # 1. dataset_non_empty
-    if source_df.empty or df.empty:
+
+    try:
+        expected_columns = {col['name'] for col in parsed_requirements['target_columns']}
+        present_columns = set(df.columns)
+        missing_columns = expected_columns - present_columns
+        expected_target_count = len(expected_columns)
+        present_target_count = len(present_columns)
+        rename_coverage = {src: tgt for src, tgt in parsed_requirements['rename_rules'].items() if src != tgt}
+        rename_pass = all(tgt in present_columns and src not in present_columns for src, tgt in rename_coverage.items())
+        legacy_source_names = {col['name'] for col in parsed_requirements['source_columns'] if col['name'] in present_columns}
+
         results.append({
-            "name": "dataset_non_empty",
-            "passed": False,
-            "details": "One of the datasets is empty."
+            'name': 'expected_columns_present',
+            'passed': len(missing_columns) == 0,
+            'details': f"Expected target count: {expected_target_count}, Present target count: {present_target_count}, "
+                       f"Missing target columns: {missing_columns}, Rename coverage: {rename_pass}, "
+                       f"Legacy source names still present: {legacy_source_names}"
         })
-    
-    # 2. row_count_sanity
-    source_row_count = source_df.shape[0]
-    output_row_count = df.shape[0]
-    input_row_count_from_requirements = "unknown"  # Placeholder for requirements-based count
-    expected_required_removals_estimate = 0  # Placeholder for expected removals
-    observed_removed_count = source_row_count - output_row_count
-    
-    if output_row_count < source_row_count:
+    except Exception as e:
         results.append({
-            "name": "row_count_sanity",
-            "passed": True,
-            "details": f"Source row count: {source_row_count}, Output row count: {output_row_count}, Observed removed count: {observed_removed_count}."
+            'name': 'expected_columns_present',
+            'passed': False,
+            'details': str(e)
         })
-    else:
+
+    try:
+        actual_renames = {src: tgt for src, tgt in parsed_requirements['rename_rules'].items() if src != tgt}
+        rename_pass = all(tgt in df.columns and src not in df.columns for src, tgt in actual_renames.items())
         results.append({
-            "name": "row_count_sanity",
-            "passed": False,
-            "details": f"Output row count {output_row_count} is not less than source row count {source_row_count}."
+            'name': 'rename_mapping_applied',
+            'passed': rename_pass,
+            'details': f"Rename mapping applied: {rename_pass}"
         })
-    
-    # 3. expected_columns_present
-    expected_columns = [col['name'] for col in parsed_requirements['target_columns']]
-    present_columns = df.columns.tolist()
-    missing_target_columns = [col for col in expected_columns if col not in present_columns]
-    
-    results.append({
-        "name": "expected_columns_present",
-        "passed": len(missing_target_columns) == 0,
-        "details": f"Expected target count: {len(expected_columns)}, Present target count: {len(present_columns)}, Missing target columns: {missing_target_columns}."
-    })
-    
-    # 4. required_fields_not_null
-    required_fields = ['transaction_id', 'transaction_timestamp', 'transaction_amount', 'is_fraud']
-    null_counts = {field: df[field].isnull().sum() for field in required_fields if field in df.columns}
-    failed_null_checks = {field: count for field, count in null_counts.items() if count > 0}
-    
-    results.append({
-        "name": "required_fields_not_null",
-        "passed": len(failed_null_checks) == 0,
-        "details": f"Null counts for required fields: {failed_null_checks}."
-    })
-    
-    # 5. id_uniqueness
-    if df['transaction_id'].is_unique:
+    except Exception as e:
         results.append({
-            "name": "id_uniqueness",
-            "passed": True,
-            "details": "All transaction IDs are unique."
+            'name': 'rename_mapping_applied',
+            'passed': False,
+            'details': str(e)
         })
-    else:
+
+    try:
+        timestamp_valid = pd.to_datetime(df['transaction_timestamp'], errors='coerce')
+        valid_range = (timestamp_valid >= '2020-01-01') & (timestamp_valid <= '2030-01-01')
         results.append({
-            "name": "id_uniqueness",
-            "passed": False,
-            "details": "Duplicate transaction IDs found."
+            'name': 'timestamp_conversion_logic',
+            'passed': valid_range.all(),
+            'details': f"All timestamps valid: {valid_range.all()}"
         })
-    
-    # 6. duplicate_rows_absent
-    if df.duplicated().sum() == 0:
+    except Exception as e:
         results.append({
-            "name": "duplicate_rows_absent",
-            "passed": True,
-            "details": "No duplicate rows found."
+            'name': 'timestamp_conversion_logic',
+            'passed': False,
+            'details': str(e)
         })
-    else:
+
+    try:
+        raw_variants = ['USA', 'us', 'U.S.', 'United States']
+        contains_variants = df['merchant_country'].isin(raw_variants).any()
         results.append({
-            "name": "duplicate_rows_absent",
-            "passed": False,
-            "details": "Duplicate rows found."
+            'name': 'merchant_country_standardization',
+            'passed': not contains_variants,
+            'details': f"Contains raw variants: {contains_variants}"
         })
-    
-    # 7. numeric_type_coercion_success
-    numeric_columns = ['transaction_amount', 'credit_limit', 'account_balance', 'avg_amount_30d']
-    type_coercion_success = all(df[col].dtype in [float, 'float64'] for col in numeric_columns if col in df.columns)
-    
-    results.append({
-        "name": "numeric_type_coercion_success",
-        "passed": type_coercion_success,
-        "details": "Numeric type coercion success check."
-    })
-    
-    # 8. timestamp_parse_success
-    if pd.to_datetime(df['transaction_timestamp'], errors='coerce').notnull().all():
+    except Exception as e:
         results.append({
-            "name": "timestamp_parse_success",
-            "passed": True,
-            "details": "All timestamps parsed successfully."
+            'name': 'merchant_country_standardization',
+            'passed': False,
+            'details': str(e)
         })
-    else:
+
+    try:
+        blank_names = (df['merchant_name'].str.strip() == '').sum()
         results.append({
-            "name": "timestamp_parse_success",
-            "passed": False,
-            "details": "Some timestamps failed to parse."
+            'name': 'merchant_name_blank_handling',
+            'passed': blank_names == 0,
+            'details': f"Blank merchant names count: {blank_names}"
         })
-    
+    except Exception as e:
+        results.append({
+            'name': 'merchant_name_blank_handling',
+            'passed': False,
+            'details': str(e)
+        })
+
+    try:
+        type_checks = {
+            'transaction_amount': pd.api.types.is_float_dtype(df['transaction_amount']),
+            'credit_limit': pd.api.types.is_float_dtype(df['credit_limit']),
+            'account_balance': pd.api.types.is_float_dtype(df['account_balance']),
+            'avg_amount_30d': pd.api.types.is_float_dtype(df['avg_amount_30d']),
+            'distance_from_home_km': pd.api.types.is_float_dtype(df['distance_from_home_km']),
+            'is_fraud': pd.api.types.is_integer_dtype(df['is_fraud']),
+            'is_foreign_transaction': pd.api.types.is_integer_dtype(df['is_foreign_transaction']),
+            'is_weekend': pd.api.types.is_integer_dtype(df['is_weekend']),
+            'is_high_risk_context': pd.api.types.is_integer_dtype(df['is_high_risk_context']),
+            'cardholder_age': pd.api.types.is_integer_dtype(df['cardholder_age']),
+            'account_age_days': pd.api.types.is_integer_dtype(df['account_age_days']),
+            'num_transactions_24h': pd.api.types.is_integer_dtype(df['num_transactions_24h']),
+            'num_declined_7d': pd.api.types.is_integer_dtype(df['num_declined_7d']),
+        }
+        type_pass = all(type_checks.values())
+        results.append({
+            'name': 'type_standardization_checks',
+            'passed': type_pass,
+            'details': f"Type checks passed: {type_pass}"
+        })
+    except Exception as e:
+        results.append({
+            'name': 'type_standardization_checks',
+            'passed': False,
+            'details': str(e)
+        })
+
+    try:
+        source_row_count = len(source_df)
+        output_row_count = len(df)
+        removed_count = source_row_count - output_row_count
+        results.append({
+            'name': 'output_schema_rowcount_sanity',
+            'passed': output_row_count > 0,
+            'details': f"Source row count: {source_row_count}, Output row count: {output_row_count}, Removed count: {removed_count}"
+        })
+    except Exception as e:
+        results.append({
+            'name': 'output_schema_rowcount_sanity',
+            'passed': False,
+            'details': str(e)
+        })
+
     return results

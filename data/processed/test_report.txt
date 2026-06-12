@@ -4,14 +4,14 @@ source_data_path: data/raw/sample_transactions.csv
 processed_data_path: data/processed/fraud_transactions.csv
 generated_tests_output_path: outputs\generated_tests.py
 source_row_count: 1000
-row_count: 965
+row_count: 985
 all_passed: False
 
 --- Test Results ---
-PASS | row_count_sanity | Source row count: 1000, Output row count: 965, Observed removed count: 35.
-PASS | expected_columns_present | Expected target count: 32, Present target count: 32, Missing target columns: [].
-PASS | required_fields_not_null | Null counts for required fields: {}.
-PASS | id_uniqueness | All transaction IDs are unique.
-PASS | duplicate_rows_absent | No duplicate rows found.
-FAIL | numeric_type_coercion_success | Numeric type coercion success check.
-PASS | timestamp_parse_success | All timestamps parsed successfully.
+PASS | expected_columns_present | Expected target count: 32, Present target count: 32, Missing target columns: set(), Rename coverage: True, Legacy source names still present: {'cardholder_age', 'account_balance', 'account_id', 'merchant_id', 'cardholder_state', 'avg_amount_30d', 'distance_from_home_km', 'credit_limit', 'cardholder_city', 'num_declined_7d', 'cardholder_zip', 'account_age_days', 'merchant_state', 'num_transactions_24h', 'merchant_city', 'merchant_category', 'is_foreign_transaction', 'merchant_name', 'merchant_country', 'transaction_id', 'pos_entry_mode', 'channel'}
+PASS | rename_mapping_applied | Rename mapping applied: True
+PASS | timestamp_conversion_logic | All timestamps valid: True
+FAIL | merchant_country_standardization | Contains raw variants: True
+PASS | merchant_name_blank_handling | Blank merchant names count: 0
+PASS | type_standardization_checks | Type checks passed: True
+PASS | output_schema_rowcount_sanity | Source row count: 1000, Output row count: 985, Removed count: 15
