@@ -1,240 +1,286 @@
 # GenAI ETL Demo
 
-This repository demonstrates the application of agentic AI to accelerate and automate data ingestion pipeline development. The system uses specialized AI agents to transform natural language requirements into executable ETL code, perform data profiling, and generate comprehensive data quality tests.
+A multi-agent AI system that automatically generates, executes, and validates an ETL pipeline from a plain-text requirements document and a sample CSV file — no hand-written transformation code required.
 
-## Project Overview
+**Input:** Business requirements document + raw transaction CSV  
+**Output:** Executable Python ETL pipeline, processed dataset, validation report, and test results
 
-The demo implements an end-to-end ETL pipeline for processing credit card transaction data for fraud detection analytics. The pipeline transforms raw transaction data from a simulated card payment vendor feed into a clean, analytics-ready format.
+---
 
-### Business Context
+## Agentic Workflow
 
-Organizations need reliable, scalable ingestion pipelines to process raw credit card transaction data and prepare it for fraud detection models and analytical workloads. This demo showcases how AI agents can automate the traditionally manual process of ETL development.
+```mermaid
+flowchart TD
+    A([👤 User / Streamlit UI])
+    B[🤖 Orchestrator]
+    C[🤖 Analyst Agent]
+    D[/📄 Mapping and Dictionary/]
+    E{👤 Approve}
+    F[🤖 Developer Agent]
+    G[/📄 Pipeline Code/]
+    H{👤 Approve}
+    I[⚙ Pipeline Execution]
+    J[/📄 Processed Data/]
+    K{👤 Approve}
+    L[🤖 Tester Agent]
+    M{All Tests Pass?}
+    N([✅ Done])
+    O([❌ Max Retries])
+    P[/📄 Test Feedback/]
+    Q[(🗄 Audit Log)]
 
-### Key Features
+    A --> B --> C --> D --> E
+    E -->|Approved| F --> G --> H
+    H -->|Approved| I --> J --> K
+    K -->|Approved| L --> M
+    M -->|Yes| N
+    M -->|No - retries left| P --> F
+    M -->|No - max retries| O
+    B -.->|events| Q
+    C -.->|events| Q
+    F -.->|events| Q
+    L -.->|events| Q
 
-- **AI-Driven Development**: LLM-powered agents automatically generate ETL code from requirements
-- **Automated Testing**: AI-generated data quality tests validate pipeline outputs
-- **Modular Architecture**: Specialized agents handle different aspects of ETL development
-- **Framework Flexibility**: Supports both pandas and PySpark execution frameworks
-- **Comprehensive Validation**: Built-in data profiling, schema validation, and quality checks
+    style A fill:#1A5276,color:#fff,stroke:#154360
+    style B fill:#2E86C1,color:#fff,stroke:#1A5276
+    style C fill:#2E86C1,color:#fff,stroke:#1A5276
+    style F fill:#2E86C1,color:#fff,stroke:#1A5276
+    style L fill:#2E86C1,color:#fff,stroke:#1A5276
+    style I fill:#16A085,color:#fff,stroke:#0E6655
+    style D fill:#E67E22,color:#fff,stroke:#CA6F1E
+    style G fill:#E67E22,color:#fff,stroke:#CA6F1E
+    style J fill:#E67E22,color:#fff,stroke:#CA6F1E
+    style P fill:#E67E22,color:#fff,stroke:#CA6F1E
+    style E fill:#8E44AD,color:#fff,stroke:#6C3483
+    style H fill:#8E44AD,color:#fff,stroke:#6C3483
+    style K fill:#8E44AD,color:#fff,stroke:#6C3483
+    style M fill:#626567,color:#fff,stroke:#4D5656
+    style Q fill:#566573,color:#fff,stroke:#2C3E50
+    style N fill:#1E8449,color:#fff,stroke:#196F3D
+    style O fill:#C0392B,color:#fff,stroke:#922B21
+```
+
+### Agent Roles
+
+| Agent | File | Responsibility |
+|-------|------|---------------|
+| Orchestrator | `agents/orchestrator.py` | LangGraph state machine; coordinates agents, runs pipeline subprocess, drives feedback loop |
+| Analyst | `agents/analyst_agent.py` | Parses requirements (LLM + rule-based); profiles source data; outputs mapping and data dictionary JSONs |
+| Developer | `agents/developer_agent.py` | Generates executable ETL code from mappings; accepts test feedback for iterative regeneration |
+| Tester | `agents/tester_agent.py` | LLM-generates test cases from requirements; executes them against processed data; produces structured results |
+
+### Information Flow Between Agents
+
+| From | To | Data |
+|------|----|------|
+| User / CLI | Orchestrator | `requirements_path`, `source_csv_path`, framework flags |
+| Analyst Agent | Developer Agent | `source_to_target_mapping.json`, `source_data_dictionary.json` |
+| Developer Agent | Orchestrator | Path to `generated_pipeline.py` |
+| Orchestrator | Pipeline | Subprocess execution (INPUT_PATH, OUTPUT_PATH baked in) |
+| Pipeline | Tester Agent | `processed_data_path`, `validation_report_path` |
+| Tester Agent | Orchestrator | `{ all_passed, test_results[], row_count }` |
+| Orchestrator | Developer Agent | `test_feedback: { test_results, generated_code, requirements }` on failure |
+
+---
+
+## Business Context
+
+Organizations need reliable, scalable ingestion pipelines to process raw credit card transaction data for fraud detection models and analytical workloads. This demo shows how AI agents can automate the traditionally manual ETL development lifecycle — reducing development time from weeks to minutes.
+
+---
 
 ## Architecture
 
-The system consists of specialized AI agents that work together to automate ETL development:
+### Design Principles
 
-### Core Agents
+- **Requirements-driven**: The plain-text requirements document is the only human-authored specification. Everything else is generated.
+- **LLM for reasoning, utilities for execution**: LLMs write code that calls deterministic helper functions in `etl_utilities.py`, keeping generated pipelines predictable and debuggable.
+- **Test-driven regeneration**: Failed tests automatically feed back into the generation loop. The system self-corrects without human intervention.
+- **Auditable**: Every agent action is logged to `outputs/agent_activity_log.json` with timestamps, inputs, outputs, and status.
+- **Modular**: Each agent is independently callable. Swap or extend any stage without touching the others.
 
-#### 1. Analyst Agent (`agents/analyst_agent.py`)
-- **Purpose**: Analyzes requirements documents and source CSV data to produce source-to-target mappings and a data dictionary in a single consolidated call
-- **Input**: Requirements document (`data/raw/requirements_document.txt`), source CSV (`data/raw/sample_transactions.csv`)
-- **Output**: Source-to-target mapping JSON (`outputs/source_to_target_mapping.json`), data dictionary JSON (`outputs/source_data_dictionary.json`)
-- **Capabilities**:
-  - Extracts schema definitions from unstructured text
-  - Identifies column mappings and transformations
-  - Profiles source data for column statistics and metadata
-  - Supports both LLM-enhanced and rule-based parsing modes
+### Core Components
 
-#### 2. Developer Agent (`agents/developer_agent.py`)
-- **Purpose**: Generates executable ETL pipeline code from source-to-target mappings
-- **Input**: Source-to-target mapping JSON
-- **Output**: Executable Python script (`outputs/generated_pipeline.py`)
-- **Capabilities**:
-  - LLM-only code generation using specialized prompts
-  - Framework-agnostic pipeline creation (pandas/PySpark)
-  - Integration with ETL utility functions
-  - Automatic validation report generation
-  - Feedback-aware iterative regeneration using test results and versioned pipeline artifacts
+#### Analyst Agent (`agents/analyst_agent.py`)
+- Parses the requirements document using both LLM and rule-based strategies
+- Profiles source CSV columns: row counts, null rates, data types, sample values, outlier flags
+- LLM annotates each column with business meaning
+- **Outputs**: `outputs/source_to_target_mapping.json`, `outputs/source_data_dictionary.json`
 
-#### 3. Testing Agent (`agents/testing_agent.py`)
-- **Purpose**: Generates and executes data quality tests against processed data
-- **Input**: Requirements, source data, and processed data
-- **Output**: Test report (`data/processed/test_report.txt`) and generated tests (`outputs/generated_tests.py`)
-- **Capabilities**:
-  - LLM-driven test case generation from requirements
-  - Automated test execution and reporting
-  - Schema validation and transformation verification
+#### Developer Agent (`agents/developer_agent.py`)
+- Builds a structured LLM prompt from the mapping and dictionary JSONs
+- LLM writes a `run()` function that loads, transforms, and saves the data using `etl_utilities.py`
+- Wraps the function in a complete, runnable Python script
+- Supports feedback-aware iterative regeneration when tests fail
+- **Output**: `outputs/generated_pipeline.py`
 
-#### 4. Orchestrator (`agents/orchestrator.py`)
-- **Purpose**: Coordinates the entire ETL development workflow
-- **Capabilities**:
-  - Sequential execution of all agents
-  - Pipeline execution and validation
-  - Feedback loop orchestration: repeat pipeline generation, execution, and testing until all tests pass
-  - Comprehensive status reporting
+#### Tester Agent (`agents/tester_agent.py`)
+- LLM generates test cases directly from the requirements document
+- Tests validate: required columns present, renames applied, timestamps converted, derived columns computed, row count reasonable
+- **Outputs**: `outputs/generated_tests.py`, `data/processed/test_report.txt`
+
+#### Orchestrator (`agents/orchestrator.py`)
+- LangGraph state machine with optional human approval checkpoints between phases
+- Executes the generated pipeline as a subprocess
+- Packages test failures as structured feedback and re-invokes the Developer Agent
+- Configurable via CLI flags; supports both automated and interactive modes
 
 ### Supporting Components
 
 #### ETL Utilities (`agents/etl_utilities.py`)
-A comprehensive library of reusable data transformation functions:
-- Data loading and saving
-- Column renaming and type casting
-- Filtering and validation
-- Derived column calculations
-- Standardization functions
+Reusable, deterministic transformation functions called by the generated pipeline:
+- **I/O**: `load_csv()`, `save_csv()`
+- **Column ops**: `rename_columns()`, `cast_column()`, `impute_nulls()`, `replace_blank_with()`
+- **Filters**: `filter_non_negative()`, `filter_range()`, `filter_valid_values()`, `filter_not_null()`
+- **Derived columns**: `add_ingestion_timestamp()`, `add_transaction_date()`, `add_transaction_hour()`, `add_is_weekend()`, `add_amount_category()`, `add_utilization_rate()`, `add_is_high_risk_context()`
+- **Standardization**: `standardize_country_codes()`, `convert_seconds_to_timestamp()`
+
+#### Activity Logger (`agents/activity_logger.py`)
+Writes structured JSON events to `outputs/agent_activity_log.json` — timestamps, agent names, stage, status, artifact paths, and iteration summaries.
 
 #### LLM Client (`agents/llm_client.py`)
-OpenAI API integration with:
-- JSON and text response handling
-- Configurable model selection
-- Error handling and retries
-- Environment variable configuration
+Thin wrapper around `langchain_openai.ChatOpenAI`. Configured via environment variables; temperature 0 for deterministic generation.
 
-## Workflow
-
-The complete ETL development process follows these steps:
-
-1. **Requirements Analysis**
-   - Analyze requirements document
-   - Generate source-to-target mapping
-   - Extract transformation rules
-
-2. **Pipeline Generation**
-   - Create executable ETL code
-   - Apply transformations and validations
-   - Generate validation reports
-
-3. **Pipeline Execution**
-   - Run generated pipeline on source data
-   - Produce processed output
-   - Create validation summary
-
-4. **Quality Testing**
-   - Generate comprehensive test suite
-   - Execute tests against processed data
-   - Produce detailed test reports
-
-## Data Flow
-
-```
-Requirements Document
-        ↓
-Source-to-Target Mapping
-        ↓
-Generated Pipeline Code
-        ↓
-Processed Data + Validation Report
-        ↓
-Test Results + Quality Report
-```
-
-## Sample Data
-
-The demo uses simulated credit card transaction data:
-- **Source**: `data/raw/sample_transactions.csv` (1,000 transactions)
-- **Schema**: 25 columns including transaction details, account info, merchant data
-- **Target**: `data/processed/fraud_transactions.csv` (32 columns with derived fields)
-- **Fraud Distribution**: ~3% fraudulent transactions
+---
 
 ## Usage
 
 ### Prerequisites
 
-1. **Python Environment**: Python 3.8+
-2. **Dependencies**: Install via `pip install -r requirements.txt`
-3. **OpenAI API**: Set `OPENAI_API_KEY` environment variable
-
-### Quick Start
-
-```bash
-# Run complete workflow
-python agents/orchestrator.py
-
-# Run with PySpark framework
-python agents/orchestrator.py --framework pyspark
-
-# Run iterative improvement until tests pass
-python agents/orchestrator.py --iterate --max-iterations 5
-
-# Generate artifacts without execution
-python agents/orchestrator.py --skip-run
-```
-
-### Individual Agent Usage
-
-```bash
-# Analyze requirements and data
-python agents/analyst_agent.py
-
-# Generate pipeline only
-python agents/developer_agent.py
-
-# Run tests only
-python agents/testing_agent.py
-```
+- Python 3.8+
+- `pip install -r requirements.txt`
+- OpenAI API key (or compatible endpoint)
 
 ### Environment Setup
 
 ```bash
-# Windows
-set OPENAI_API_KEY=your_api_key_here
-
-# Linux/Mac
-export OPENAI_API_KEY=your_api_key_here
-
-# Or create .env file
-echo "OPENAI_API_KEY=your_api_key_here" > .env
+# .env file (recommended)
+OPENAI_API_KEY=your_api_key_here
+OPENAI_BASE_URL=https://api.openai.com/v1   # optional — override for custom endpoints
+OPENAI_MODEL=gpt-4o-mini                    # optional — default: gpt-4o-mini
 ```
+
+### Streamlit UI (Interactive)
+
+```bash
+streamlit run app.py
+```
+
+The UI provides a step-by-step interface with phase status indicators, human approval gates, artifact previews, and configurable retry settings.
+
+### CLI (Automated)
+
+```bash
+# Full workflow: analyst → developer → execute → test
+python -m agents.orchestrator
+
+# With test-driven iteration (recommended for demos)
+python -m agents.orchestrator --iterate --max-iterations 5
+
+# Skip the analyst step (reuse an existing mapping)
+python -m agents.orchestrator --skip-analyst
+
+# Generate pipeline code only, do not execute
+python -m agents.orchestrator --skip-run
+
+# Run with PySpark framework
+python -m agents.orchestrator --framework pyspark
+
+# Disable human approval prompts
+python -m agents.orchestrator --no-approval
+```
+
+### Individual Agents
+
+```bash
+python agents/analyst_agent.py
+python agents/developer_agent.py
+python agents/tester_agent.py
+```
+
+---
+
+## Sample Data
+
+| Property | Value |
+|----------|-------|
+| Source file | `data/raw/sample_transactions.csv` |
+| Records | 1,000 credit card transactions |
+| Source columns | 25 (transaction details, account info, merchant data) |
+| Target file | `data/processed/fraud_transactions.csv` |
+| Target columns | 32 (adds derived timestamps, categories, indicators) |
+| Fraud rate | ~3% |
+
+### Source → Target Transformations (examples)
+
+| Source Column | Target Column | Transformation |
+|---------------|---------------|----------------|
+| `Time` | `transaction_timestamp` | Seconds-since-epoch → datetime |
+| `Amount` | `transaction_amount` | Rename + filter non-negative |
+| `Class` | `is_fraud` | Rename + integer type cast |
+| *(derived)* | `ingestion_timestamp` | UTC timestamp at load time |
+| *(derived)* | `amount_category` | low / medium / high / outlier bands |
+| *(derived)* | `transaction_hour` | Hour extracted from timestamp |
+| *(derived)* | `is_weekend` | Boolean flag |
+| *(derived)* | `utilization_rate` | `Amount / credit_limit` |
+| `MerchantCountry` | `merchant_country_code` | Standardize to ISO-2 (`USA` → `US`) |
+
+---
 
 ## Output Artifacts
 
-The workflow generates several artifacts:
+| Artifact | Description |
+|----------|-------------|
+| `outputs/source_to_target_mapping.json` | Structured column mapping and transformation spec |
+| `outputs/source_data_dictionary.json` | Profiled column statistics with business annotations |
+| `outputs/generated_pipeline.py` | AI-generated, executable ETL script |
+| `outputs/generated_tests.py` | AI-generated test suite |
+| `outputs/agent_activity_log.json` | Persistent audit trail of all agent events |
+| `data/processed/fraud_transactions.csv` | Cleaned, transformed output dataset |
+| `data/processed/validation_report.txt` | Row counts, rejection summary |
+| `data/processed/test_report.txt` | Human-readable test pass/fail results |
 
-- `outputs/source_to_target_mapping.json`: Structured mapping definition
-- `outputs/generated_pipeline.py`: Executable ETL code
-- `outputs/generated_tests.py`: Generated test suite
-- `data/processed/fraud_transactions.csv`: Cleaned output data
-- `data/processed/validation_report.txt`: Processing summary
-- `data/processed/test_report.txt`: Quality test results
-- `outputs/agent_activity_log.json`: Persistent activity log for agent events, iteration summaries, and retrievable prompts/outputs
-- `outputs/generated_pipeline_iteration_{n}.py`, `data/processed/test_report_iteration_{n}.txt`, `outputs/test_summary_iteration_{n}.json`: Versioned iteration artifacts when run with `--iterate`
+When running with `--iterate`, versioned copies are written per iteration:
+- `outputs/generated_pipeline_iteration_{n}.py`
+- `data/processed/test_report_iteration_{n}.txt`
+- `outputs/test_summary_iteration_{n}.json`
 
-## Configuration
+---
 
-### LLM Settings
-Configure via environment variables:
-- `OPENAI_API_KEY`: Required API key
-- `OPENAI_BASE_URL`: Optional custom endpoint (default: OpenAI)
-- `OPENAI_MODEL`: Optional model selection (default: gpt-4o-mini)
+## Technology Stack
 
-### Pipeline Options
-- **Framework**: `pandas` (default) or `pyspark`
-- **Execution Mode**: Generate-only or execute pipeline
-- **File Paths**: Customizable input/output locations
+| Layer | Technology |
+|-------|-----------|
+| Orchestration | LangGraph (state machine with human-in-the-loop checkpoints) |
+| LLM integration | LangChain + LangChain-OpenAI (`ChatOpenAI`) |
+| Default model | `gpt-4o-mini` (configurable) |
+| Data processing | Pandas (primary); PySpark (configurable) |
+| UI | Streamlit |
+| Testing | Pytest |
 
-## Validation & Testing
+---
 
-The system includes comprehensive validation:
+## Repository Structure
 
-- **Schema Validation**: Ensures all required columns present
-- **Type Checking**: Validates data types match specifications
-- **Transformation Verification**: Confirms business rules applied
-- **Data Quality Tests**: Automated checks for data integrity
-- **Processing Reports**: Detailed summaries of transformations
-
-## Example Results
-
-Recent execution processed 1,000 input records:
-- **Output Records**: 965 (35 filtered due to validation rules)
-- **Fraud Distribution**: 935 legitimate, 30 fraudulent
-- **Amount Categories**: 241 low, 482 medium, 193 high, 49 outlier
-- **Test Coverage**: 7 automated validation checks
-
-## Architecture Benefits
-
-- **Speed**: Reduces ETL development from weeks to minutes
-- **Consistency**: Eliminates human error in mapping implementation
-- **Maintainability**: Self-documenting code with comprehensive tests
-- **Scalability**: Framework-agnostic design supports various platforms
-- **Auditability**: Complete traceability from requirements to execution
-
-## Future Enhancements
-
-- Multi-source data integration
-- Advanced transformation patterns
-- Real-time pipeline execution
-- Cloud-native deployment options
-- Enhanced error handling and recovery
-
-## Contributing
-
-This is a demonstration project showcasing AI-driven ETL development. For questions or contributions, please refer to the agent implementations and utility functions.
+```
+genai_etl_demo/
+├── agents/
+│   ├── orchestrator.py        # LangGraph workflow controller (entry point)
+│   ├── analyst_agent.py       # Requirements parsing + data profiling
+│   ├── developer_agent.py     # LLM pipeline code generation
+│   ├── tester_agent.py        # LLM test generation + execution
+│   ├── etl_utilities.py       # Reusable transformation library
+│   ├── llm_client.py          # OpenAI API wrapper
+│   └── activity_logger.py     # Structured JSON audit logging
+├── data/
+│   ├── raw/
+│   │   ├── sample_transactions.csv   # Source data (1,000 records)
+│   │   └── requirements_document.txt # Business specification
+│   └── processed/                    # Pipeline outputs (generated)
+├── outputs/                          # Generated artifacts
+├── docs/
+│   ├── DEMO_OVERVIEW.md
+│   └── architecture_diagram.png
+├── app.py                            # Streamlit UI
+└── requirements.txt
+```
