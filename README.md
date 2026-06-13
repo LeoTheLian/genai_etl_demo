@@ -11,32 +11,35 @@ A multi-agent AI system that automatically generates, executes, and validates an
 
 ```mermaid
 flowchart TD
-    A([🧑‍💻 User / Streamlit])
+    A([👤 User / Streamlit UI])
     B[🤖 Orchestrator]
     C[🤖 Analyst Agent]
-    D[/📄 Mapping &\nDictionary/]
+    D[/📄 Mapping and Dictionary/]
     E{👤 Approve}
     F[🤖 Developer Agent]
-    G[/📄 Pipeline\nCode/]
+    G[/📄 Pipeline Code/]
     H{👤 Approve}
-    I[⚙️ Pipeline\nExecution]
-    J[/📄 Processed\nData/]
+    I[⚙ Pipeline Execution]
+    J[/📄 Processed Data/]
     K{👤 Approve}
     L[🤖 Tester Agent]
-    M{All Tests\nPass?}
+    M{All Tests Pass?}
     N([✅ Done])
     O([❌ Max Retries])
-    P[/📄 Test\nFeedback/]
-    Q[(🗄️ Audit Log)]
+    P[/📄 Test Feedback/]
+    Q[(🗄 Audit Log)]
 
     A --> B --> C --> D --> E
     E -->|Approved| F --> G --> H
     H -->|Approved| I --> J --> K
     K -->|Approved| L --> M
     M -->|Yes| N
-    M -->|No — retries left| P --> F
-    M -->|No — max retries| O
-    B & C & F & L -.->|events| Q
+    M -->|No - retries left| P --> F
+    M -->|No - max retries| O
+    B -.->|events| Q
+    C -.->|events| Q
+    F -.->|events| Q
+    L -.->|events| Q
 
     style A fill:#1A5276,color:#fff,stroke:#154360
     style B fill:#2E86C1,color:#fff,stroke:#1A5276
