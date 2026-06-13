@@ -12,37 +12,39 @@ A multi-agent AI system that automatically generates, executes, and validates an
 ```mermaid
 flowchart TD
     A([👤 User / Streamlit UI])
-    B[🤖 Orchestrator]
-    C[🤖 Analyst Agent]
-    D[/📄 Mapping and Dictionary/]
-    E{👤 Approve}
-    F[🤖 Developer Agent]
-    G[/📄 Pipeline Code/]
-    H{👤 Approve}
-    I[⚙ Pipeline Execution]
-    J[/📄 Processed Data/]
-    K{👤 Approve}
-    L[🤖 Tester Agent]
-    M{All Tests Pass?}
     N([✅ Done])
     O([❌ Max Retries])
-    P[/📄 Test Feedback/]
     Q[(🗄 Audit Log)]
 
-    A --> B --> C --> D --> E
-    E -->|Approved| F --> G --> H
-    H -->|Approved| I --> J --> K
-    K -->|Approved| L --> M
+    subgraph ORCH ["⚡ Orchestrator - LangGraph State Machine"]
+        C[🤖 Analyst Agent]
+        D[/📄 Mapping and Dictionary/]
+        E{👤 Approve}
+        F[🤖 Developer Agent]
+        G[/📄 Pipeline Code/]
+        H{👤 Approve}
+        I[⚙ Pipeline Execution]
+        J[/📄 Processed Data/]
+        K{👤 Approve}
+        L[🤖 Tester Agent]
+        M{All Tests Pass?}
+        P[/📄 Test Feedback/]
+
+        C --> D --> E
+        E -->|Approved| F --> G --> H
+        H -->|Approved| I --> J --> K
+        K -->|Approved| L --> M
+        M -->|No - retries left| P --> F
+    end
+
+    A --> C
     M -->|Yes| N
-    M -->|No - retries left| P --> F
     M -->|No - max retries| O
-    B -.->|events| Q
     C -.->|events| Q
     F -.->|events| Q
     L -.->|events| Q
 
     style A fill:#1A5276,color:#fff,stroke:#154360
-    style B fill:#2E86C1,color:#fff,stroke:#1A5276
     style C fill:#2E86C1,color:#fff,stroke:#1A5276
     style F fill:#2E86C1,color:#fff,stroke:#1A5276
     style L fill:#2E86C1,color:#fff,stroke:#1A5276
@@ -59,6 +61,15 @@ flowchart TD
     style N fill:#1E8449,color:#fff,stroke:#196F3D
     style O fill:#C0392B,color:#fff,stroke:#922B21
 ```
+
+| | Icon | Shape | Meaning |
+|-|------|-------|---------|
+| ![blue](https://placehold.co/12x12/2E86C1/2E86C1.png) | 🤖 | Rectangle | AI Agent — makes LLM calls |
+| ![orange](https://placehold.co/12x12/E67E22/E67E22.png) | 📄 | Parallelogram | File artifact |
+| ![purple](https://placehold.co/12x12/8E44AD/8E44AD.png) | 👤 | Diamond | Human approval gate |
+| ![teal](https://placehold.co/12x12/16A085/16A085.png) | ⚙ | Rectangle | Subprocess — no LLM |
+| ![gray](https://placehold.co/12x12/566573/566573.png) | 🗄 | Cylinder | Storage |
+| | ⚡ | Subgraph border | Coded workflow logic — no LLM |
 
 ### Agent Roles
 
