@@ -247,7 +247,6 @@ python agents/tester_agent.py
 | `outputs/generated_tests.py` | AI-generated test suite |
 | `outputs/agent_activity_log.json` | Persistent audit trail of all agent events |
 | `data/processed/fraud_transactions.csv` | Cleaned, transformed output dataset |
-| `data/processed/validation_report.txt` | Row counts, rejection summary |
 | `data/processed/test_report.txt` | Human-readable test pass/fail results |
 
 When running with `--iterate`, versioned copies are written per iteration:
