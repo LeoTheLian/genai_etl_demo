@@ -24,6 +24,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from agents.llm_client import llm_available, make_llm
 from agents.analyst_agent import _parse_requirements_rule_based
+from agents.prompt_logger import PromptResponseLogger
 
 
 def _load_requirements(path: str) -> tuple[str, dict]:
@@ -284,7 +285,18 @@ def _generate_tests_code_llm(
         ("human", "{user_prompt}"),
     ])
     chain = (prompt | make_llm() | StrOutputParser()).with_retry(stop_after_attempt=2)
-    return _strip_code_fences(chain.invoke({"user_prompt": user_prompt}))
+    raw_response = chain.invoke({"user_prompt": user_prompt})
+    try:
+        PromptResponseLogger().log(
+            agent="tester",
+            call_type="test_generation",
+            system_prompt=_TESTER_SYSTEM_PROMPT,
+            human_prompt=user_prompt,
+            raw_response=raw_response,
+        )
+    except Exception:
+        pass
+    return _strip_code_fences(raw_response)
 
 
 def _compile_generated_tests(code: str):

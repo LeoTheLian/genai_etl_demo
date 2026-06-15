@@ -23,6 +23,7 @@ from agents.developer_agent import generate_pipeline_code
 from agents.tester_agent import run_tests
 from agents.orchestrator import _run_pipeline_subprocess
 from agents.activity_logger import AgentActivityLogger
+from agents.prompt_logger import PromptResponseLogger
 
 # ── Page config (must be the first Streamlit call) ────────────────────────────
 st.set_page_config(
@@ -560,6 +561,77 @@ def _render_action_buttons(config: dict) -> None:
             st.rerun()
 
 
+# ── LLM Prompts & Responses tab ───────────────────────────────────────────────
+
+_CALL_TYPE_LABELS = {
+    "requirements_parsing": "Requirements Parsing",
+    "data_profiling": "Data Profiling",
+    "code_generation": "Code Generation",
+    "test_generation": "Test Generation",
+}
+
+_RESPONSE_LANGUAGES = {
+    "requirements_parsing": "json",
+    "data_profiling": "json",
+    "code_generation": "python",
+    "test_generation": "python",
+}
+
+_AGENT_LABELS = {
+    "analyst": "Analyst Agent",
+    "developer": "Developer Agent",
+    "tester": "Tester Agent",
+}
+
+_AGENT_ORDER = ["analyst", "developer", "tester"]
+
+
+def _render_prompt_tab() -> None:
+    entries = PromptResponseLogger.load()
+    if not entries:
+        st.info("Run the pipeline to see LLM prompts and responses here.")
+        return
+
+    by_agent: dict[str, list[dict]] = {a: [] for a in _AGENT_ORDER}
+    for entry in entries:
+        agent = entry.get("agent", "")
+        if agent in by_agent:
+            by_agent[agent].append(entry)
+
+    for agent in _AGENT_ORDER:
+        agent_entries = by_agent[agent]
+        if not agent_entries:
+            continue
+
+        st.subheader(_AGENT_LABELS.get(agent, agent.title()))
+
+        for i, entry in enumerate(agent_entries):
+            call_type = entry.get("call_type", "unknown")
+            label = _CALL_TYPE_LABELS.get(call_type, call_type.replace("_", " ").title())
+            if len(agent_entries) > 1:
+                label = f"{label} — Attempt {i + 1}"
+
+            st.markdown(f"**{label}**")
+            ts = entry.get("timestamp", "")
+            if ts:
+                st.caption(f"Called at {ts}")
+
+            with st.expander("Prompt", expanded=False):
+                st.markdown("**System:**")
+                st.code(entry.get("system_prompt", ""), language="text")
+                st.markdown("**Human:**")
+                st.code(entry.get("human_prompt", ""), language="text")
+
+            lang = _RESPONSE_LANGUAGES.get(call_type, "text")
+            with st.expander("Raw Response", expanded=False):
+                st.code(entry.get("raw_response", ""), language=lang)
+
+            if i < len(agent_entries) - 1:
+                st.markdown("---")
+
+        st.divider()
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -569,10 +641,9 @@ def main() -> None:
     st.title("⚙️ GenAI ETL Orchestrator")
     st.caption("Step-by-step pipeline with human review at each stage.")
 
-    _render_flow_diagram()
-
     if run_clicked:
         _reset_state()
+        PromptResponseLogger().clear()
         st.session_state.config = config
         st.session_state.phase = "running_analyst"
         st.rerun()
@@ -580,24 +651,31 @@ def main() -> None:
     # Use the config captured at run start for the rest of the run
     active_config = st.session_state.config or config
 
-    # Render all completed artifact sections (always visible once produced)
+    _render_flow_diagram()
+
     st.divider()
-    _render_analyst_section()
-    _render_developer_section()
-    _render_tester_section()
-    _render_executor_section()
+    tab_pipeline, tab_prompts = st.tabs(["Pipeline", "LLM Prompts & Responses"])
 
-    # Execute the current running phase (triggers st.rerun() internally)
-    _run_phase(active_config)
+    with tab_pipeline:
+        _render_analyst_section()
+        _render_developer_section()
+        _render_tester_section()
+        _render_executor_section()
 
-    # Render action buttons for non-running paused phases
-    phase = st.session_state.phase
-    if phase == "idle":
-        st.info(
-            "Configure the pipeline in the sidebar, then click **Start Pipeline** to begin."
-        )
-    elif not phase.startswith("running_"):
-        _render_action_buttons(active_config)
+        # Execute the current running phase (triggers st.rerun() internally)
+        _run_phase(active_config)
+
+        # Render action buttons for non-running paused phases
+        phase = st.session_state.phase
+        if phase == "idle":
+            st.info(
+                "Configure the pipeline in the sidebar, then click **Start Pipeline** to begin."
+            )
+        elif not phase.startswith("running_"):
+            _render_action_buttons(active_config)
+
+    with tab_prompts:
+        _render_prompt_tab()
 
 
 if __name__ == "__main__":

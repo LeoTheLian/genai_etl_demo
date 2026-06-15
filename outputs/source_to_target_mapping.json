@@ -262,7 +262,12 @@
   "rename_rules": {
     "Time": "transaction_timestamp",
     "Amount": "transaction_amount",
-    "Class": "is_fraud"
+    "Class": "is_fraud",
+    "merchant_country": "merchant_country",
+    "merchant_name": "merchant_name",
+    "merchant_category": "merchant_category",
+    "channel": "channel",
+    "pos_entry_mode": "pos_entry_mode"
   },
   "source_to_target_mapping": [
     {
@@ -399,14 +404,14 @@
       "target_type": "string",
       "mapping_type": "pass_through",
       "transformation": "",
-      "description": "merchant location state (2-letter uppercase code)"
+      "description": "merchant location state (2-letter code)"
     },
     {
       "source_column": "merchant_country",
       "target_column": "merchant_country",
       "target_type": "string",
       "mapping_type": "derived",
-      "transformation": "standardized to ISO 2-letter codes",
+      "transformation": "standardized to ISO 2-letter code",
       "description": "merchant country (inconsistently formatted)"
     },
     {
@@ -467,6 +472,14 @@
     },
     {
       "source_column": null,
+      "target_column": "ingestion_timestamp",
+      "target_type": "timestamp",
+      "mapping_type": "derived",
+      "transformation": "current timestamp",
+      "description": "pipeline execution time (system-generated)"
+    },
+    {
+      "source_column": null,
       "target_column": "transaction_date",
       "target_type": "date",
       "mapping_type": "derived",
@@ -511,7 +524,7 @@
       "target_type": "integer",
       "mapping_type": "derived",
       "transformation": "1 if is_foreign_transaction=1 OR num_declined_7d > 2 OR distance_from_home_km > 500, else 0",
-      "description": "derived from is_foreign_transaction, num_declined_7d, and distance_from_home_km"
+      "description": "derived from transaction context"
     }
   ],
   "unmapped_source_columns": [],

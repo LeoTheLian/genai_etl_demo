@@ -262,5 +262,103 @@
     "input_paths": {},
     "output_paths": {},
     "metadata": {}
+  },
+  {
+    "timestamp": "2026-06-15T20:10:40Z",
+    "agent": "analyst",
+    "stage": "completed",
+    "status": "success",
+    "iteration": null,
+    "details": "",
+    "input_paths": {},
+    "output_paths": {
+      "mapping": "outputs/source_to_target_mapping.json"
+    },
+    "metadata": {}
+  },
+  {
+    "timestamp": "2026-06-15T20:26:17Z",
+    "agent": "analyst",
+    "stage": "completed",
+    "status": "success",
+    "iteration": null,
+    "details": "",
+    "input_paths": {},
+    "output_paths": {
+      "mapping": "outputs/source_to_target_mapping.json"
+    },
+    "metadata": {}
+  },
+  {
+    "timestamp": "2026-06-15T20:36:20Z",
+    "agent": "analyst",
+    "stage": "completed",
+    "status": "success",
+    "iteration": null,
+    "details": "",
+    "input_paths": {},
+    "output_paths": {
+      "mapping": "outputs/source_to_target_mapping.json"
+    },
+    "metadata": {}
+  },
+  {
+    "timestamp": "2026-06-15T20:44:47Z",
+    "agent": "developer",
+    "stage": "completed",
+    "status": "success",
+    "iteration": 1,
+    "details": "",
+    "input_paths": {},
+    "output_paths": {
+      "pipeline": "outputs\\generated_pipeline.py"
+    },
+    "metadata": {}
+  },
+  {
+    "timestamp": "2026-06-15T20:46:32Z",
+    "agent": "executor",
+    "stage": "completed",
+    "status": "failure",
+    "iteration": null,
+    "details": "Generated pipeline failed (exit 1): Traceback (most recent call last):\n  File \"C:\\Users\\leo.lian\\source_repo\\genai_etl_demo\\venv\\Lib\\site-packages\\pandas\\core\\indexes\\base.py\", line 3812, in get_loc\n    return self._engine.get_loc(casted_key)\n           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\n  File \"pandas/_libs/index.pyx\", line 167, in pandas._libs.index.IndexEngine.get_loc\n  File \"pandas/_libs/index.pyx\", line 196, in pandas._libs.index.IndexEngine.get_loc\n  File \"pandas/_libs/hashtable_class_helper.pxi\", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item\n  File \"pandas/_libs/hashtabl",
+    "input_paths": {},
+    "output_paths": {},
+    "metadata": {}
+  },
+  {
+    "timestamp": "2026-06-15T20:46:46Z",
+    "agent": "developer",
+    "stage": "completed",
+    "status": "success",
+    "iteration": 2,
+    "details": "",
+    "input_paths": {},
+    "output_paths": {
+      "pipeline": "outputs\\generated_pipeline.py"
+    },
+    "metadata": {}
+  },
+  {
+    "timestamp": "2026-06-15T20:46:50Z",
+    "agent": "executor",
+    "stage": "completed",
+    "status": "success",
+    "iteration": null,
+    "details": "",
+    "input_paths": {},
+    "output_paths": {},
+    "metadata": {}
+  },
+  {
+    "timestamp": "2026-06-15T20:50:53Z",
+    "agent": "tester",
+    "stage": "completed",
+    "status": "success",
+    "iteration": 2,
+    "details": "",
+    "input_paths": {},
+    "output_paths": {},
+    "metadata": {}
   }
 ]
