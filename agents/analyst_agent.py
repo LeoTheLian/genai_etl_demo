@@ -24,10 +24,11 @@ if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from agents.llm_client import llm_available, make_llm
+from agents.prompt_logger import PromptResponseLogger
 
 
 # ---------------------------------------------------------------------------
@@ -186,12 +187,24 @@ _REQUIREMENTS_SYSTEM_PROMPT = (
 
 def _llm_enrich_dictionary(profile):
     """Enrich data profile with LLM-generated business meanings and insights."""
+    human_prompt = _build_profiler_prompt(profile)
     prompt = ChatPromptTemplate.from_messages([
         ("system", _PROFILER_SYSTEM_PROMPT),
         ("human", "{user_prompt}"),
     ])
-    chain = prompt | make_llm() | JsonOutputParser()
-    result = chain.invoke({"user_prompt": _build_profiler_prompt(profile)})
+    chain = prompt | make_llm() | StrOutputParser()
+    raw_response = chain.invoke({"user_prompt": human_prompt})
+    try:
+        PromptResponseLogger().log(
+            agent="analyst",
+            call_type="data_profiling",
+            system_prompt=_PROFILER_SYSTEM_PROMPT,
+            human_prompt=human_prompt,
+            raw_response=raw_response,
+        )
+    except Exception:
+        pass
+    result = JsonOutputParser().parse(raw_response)
     if "data_dictionary" not in result:
         raise RuntimeError("LLM response missing data_dictionary")
     return result["data_dictionary"]
@@ -467,12 +480,24 @@ def parse_requirements(text, use_llm=True):
     """Parse requirements text using LLM or deterministic fallback."""
     if use_llm and llm_available():
         try:
+            human_prompt = _build_requirements_prompt(text)
             prompt = ChatPromptTemplate.from_messages([
                 ("system", _REQUIREMENTS_SYSTEM_PROMPT),
                 ("human", "{user_prompt}"),
             ])
-            chain = prompt | make_llm() | JsonOutputParser()
-            parsed = chain.invoke({"user_prompt": _build_requirements_prompt(text)})
+            chain = prompt | make_llm() | StrOutputParser()
+            raw_response = chain.invoke({"user_prompt": human_prompt})
+            try:
+                PromptResponseLogger().log(
+                    agent="analyst",
+                    call_type="requirements_parsing",
+                    system_prompt=_REQUIREMENTS_SYSTEM_PROMPT,
+                    human_prompt=human_prompt,
+                    raw_response=raw_response,
+                )
+            except Exception:
+                pass
+            parsed = JsonOutputParser().parse(raw_response)
             required_keys = {
                 "target_table",
                 "source_columns",

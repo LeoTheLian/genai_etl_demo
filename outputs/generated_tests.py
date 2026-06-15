@@ -1,22 +1,20 @@
 def generate_test_results(source_df, df, parsed_requirements):
     results = []
-
+    
     try:
         expected_columns = {col['name'] for col in parsed_requirements['target_columns']}
-        present_columns = set(df.columns)
-        missing_columns = expected_columns - present_columns
+        present_target_columns = set(df.columns)
+        missing_target_columns = expected_columns - present_target_columns
         expected_target_count = len(expected_columns)
-        present_target_count = len(present_columns)
+        present_target_count = len(present_target_columns)
+        
         rename_coverage = {src: tgt for src, tgt in parsed_requirements['rename_rules'].items() if src != tgt}
-        rename_pass = all(tgt in present_columns and src not in present_columns for src, tgt in rename_coverage.items())
-        legacy_source_names = {col['name'] for col in parsed_requirements['source_columns'] if col['name'] in present_columns}
-
+        rename_pass = all(tgt in present_target_columns and src not in present_target_columns for src, tgt in rename_coverage.items())
+        
         results.append({
             'name': 'expected_columns_present',
-            'passed': len(missing_columns) == 0,
-            'details': f"Expected target count: {expected_target_count}, Present target count: {present_target_count}, "
-                       f"Missing target columns: {missing_columns}, Rename coverage: {rename_pass}, "
-                       f"Legacy source names still present: {legacy_source_names}"
+            'passed': len(missing_target_columns) == 0,
+            'details': f"Expected target count: {expected_target_count}, Present target count: {present_target_count}, Missing target columns: {missing_target_columns}, Rename coverage: {rename_pass}"
         })
     except Exception as e:
         results.append({
@@ -28,6 +26,7 @@ def generate_test_results(source_df, df, parsed_requirements):
     try:
         actual_renames = {src: tgt for src, tgt in parsed_requirements['rename_rules'].items() if src != tgt}
         rename_pass = all(tgt in df.columns and src not in df.columns for src, tgt in actual_renames.items())
+        
         results.append({
             'name': 'rename_mapping_applied',
             'passed': rename_pass,
@@ -41,12 +40,14 @@ def generate_test_results(source_df, df, parsed_requirements):
         })
 
     try:
-        timestamp_valid = pd.to_datetime(df['transaction_timestamp'], errors='coerce')
-        valid_range = (timestamp_valid >= '2020-01-01') & (timestamp_valid <= '2030-01-01')
+        transaction_timestamp_valid = pd.to_datetime(df['transaction_timestamp'], errors='coerce')
+        plausible_range = (pd.Timestamp('2020-01-01') <= transaction_timestamp_valid) & (transaction_timestamp_valid <= pd.Timestamp('2030-01-01'))
+        timestamp_pass = plausible_range.all()
+        
         results.append({
             'name': 'timestamp_conversion_logic',
-            'passed': valid_range.all(),
-            'details': f"All timestamps valid: {valid_range.all()}"
+            'passed': timestamp_pass,
+            'details': f"All timestamps valid: {timestamp_pass}"
         })
     except Exception as e:
         results.append({
@@ -57,11 +58,12 @@ def generate_test_results(source_df, df, parsed_requirements):
 
     try:
         raw_variants = ['USA', 'us', 'U.S.', 'United States']
-        contains_variants = df['merchant_country'].isin(raw_variants).any()
+        merchant_country_pass = not df['merchant_country'].isin(raw_variants).any()
+        
         results.append({
             'name': 'merchant_country_standardization',
-            'passed': not contains_variants,
-            'details': f"Contains raw variants: {contains_variants}"
+            'passed': merchant_country_pass,
+            'details': f"Merchant country standardized: {merchant_country_pass}"
         })
     except Exception as e:
         results.append({
@@ -71,11 +73,12 @@ def generate_test_results(source_df, df, parsed_requirements):
         })
 
     try:
-        blank_names = (df['merchant_name'].str.strip() == '').sum()
+        blank_merchant_name_pass = (df['merchant_name'].str.strip() != '').all()
+        
         results.append({
             'name': 'merchant_name_blank_handling',
-            'passed': blank_names == 0,
-            'details': f"Blank merchant names count: {blank_names}"
+            'passed': blank_merchant_name_pass,
+            'details': f"No blank merchant names: {blank_merchant_name_pass}"
         })
     except Exception as e:
         results.append({
@@ -101,10 +104,11 @@ def generate_test_results(source_df, df, parsed_requirements):
             'num_declined_7d': pd.api.types.is_integer_dtype(df['num_declined_7d']),
         }
         type_pass = all(type_checks.values())
+        
         results.append({
             'name': 'type_standardization_checks',
             'passed': type_pass,
-            'details': f"Type checks passed: {type_pass}"
+            'details': f"Type standardization checks passed: {type_pass}"
         })
     except Exception as e:
         results.append({
@@ -117,6 +121,7 @@ def generate_test_results(source_df, df, parsed_requirements):
         source_row_count = len(source_df)
         output_row_count = len(df)
         removed_count = source_row_count - output_row_count
+        
         results.append({
             'name': 'output_schema_rowcount_sanity',
             'passed': output_row_count > 0,
