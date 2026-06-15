@@ -243,7 +243,6 @@ python agents/tester_agent.py
 | Artifact | Description |
 |----------|-------------|
 | `outputs/source_to_target_mapping.json` | Structured column mapping and transformation spec |
-| `outputs/source_data_dictionary.json` | Profiled column statistics with business annotations |
 | `outputs/generated_pipeline.py` | AI-generated, executable ETL script |
 | `outputs/generated_tests.py` | AI-generated test suite |
 | `outputs/agent_activity_log.json` | Persistent audit trail of all agent events |
@@ -289,9 +288,6 @@ genai_etl_demo/
 │   │   └── requirements_document.txt # Business specification
 │   └── processed/                    # Pipeline outputs (generated)
 ├── outputs/                          # Generated artifacts
-├── docs/
-│   ├── DEMO_OVERVIEW.md
-│   └── architecture_diagram.png
 ├── app.py                            # Streamlit UI
 └── requirements.txt
 ```
