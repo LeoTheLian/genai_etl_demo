@@ -3,7 +3,7 @@
 A multi-agent AI system that automatically generates, executes, and validates an ETL pipeline from a plain-text requirements document and a sample CSV file — no hand-written transformation code required.
 
 **Input:** Business requirements document + raw transaction CSV  
-**Output:** Executable Python ETL pipeline, processed dataset, validation report, and test results
+**Output:** Executable Python ETL pipeline, processed dataset, and test results
 
 ---
 
@@ -76,7 +76,7 @@ flowchart TD
 | Agent | File | Responsibility |
 |-------|------|---------------|
 | Orchestrator | `agents/orchestrator.py` | LangGraph state machine; coordinates agents, runs pipeline subprocess, drives feedback loop |
-| Analyst | `agents/analyst_agent.py` | Parses requirements (LLM + rule-based); profiles source data; outputs mapping and data dictionary JSONs |
+| Analyst | `agents/analyst_agent.py` | Parses requirements (LLM + rule-based); profiles source data; outputs mapping JSON |
 | Developer | `agents/developer_agent.py` | Generates executable ETL code from mappings; accepts test feedback for iterative regeneration |
 | Tester | `agents/tester_agent.py` | LLM-generates test cases from requirements; executes them against processed data; produces structured results |
 
@@ -85,10 +85,10 @@ flowchart TD
 | From | To | Data |
 |------|----|------|
 | User / CLI | Orchestrator | `requirements_path`, `source_csv_path`, framework flags |
-| Analyst Agent | Developer Agent | `source_to_target_mapping.json`, `source_data_dictionary.json` |
+| Analyst Agent | Developer Agent | `source_to_target_mapping.json`|
 | Developer Agent | Orchestrator | Path to `generated_pipeline.py` |
 | Orchestrator | Pipeline | Subprocess execution (INPUT_PATH, OUTPUT_PATH baked in) |
-| Pipeline | Tester Agent | `processed_data_path`, `validation_report_path` |
+| Pipeline | Tester Agent | `processed_data_path`|
 | Tester Agent | Orchestrator | `{ all_passed, test_results[], row_count }` |
 | Orchestrator | Developer Agent | `test_feedback: { test_results, generated_code, requirements }` on failure |
 
@@ -116,7 +116,7 @@ Organizations need reliable, scalable ingestion pipelines to process raw credit 
 - Parses the requirements document using both LLM and rule-based strategies
 - Profiles source CSV columns: row counts, null rates, data types, sample values, outlier flags
 - LLM annotates each column with business meaning
-- **Outputs**: `outputs/source_to_target_mapping.json`, `outputs/source_data_dictionary.json`
+- **Outputs**: `outputs/source_to_target_mapping.json`
 
 #### Developer Agent (`agents/developer_agent.py`)
 - Builds a structured LLM prompt from the mapping and dictionary JSONs
