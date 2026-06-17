@@ -3,7 +3,7 @@
 # Target table : fraud_transactions
 # Source file  : data/raw/sample_transactions.csv
 # Framework    : pandas
-# Generated at : 2026-06-16 17:09:40 UTC
+# Generated at : 2026-06-17 20:45:29 UTC
 # Mode         : llm_only
 # =============================================================================
 
@@ -42,7 +42,6 @@ OUTPUT_PATH = str(_PROJECT_ROOT / "data/processed/fraud_transactions.csv")
 
 
 def run():
-    # Load source data
     df = load_csv(INPUT_PATH)
 
     # Rename columns
@@ -53,32 +52,23 @@ def run():
     }
     df = rename_columns(df, rename_map)
 
-    # Convert seconds to timestamp
+    # Convert 'Time' to 'transaction_timestamp'
     df = convert_seconds_to_timestamp(df, 'transaction_timestamp', 'transaction_timestamp')
 
-    # Replace blank merchant names
+    # Replace blank merchant names with 'UNKNOWN'
     df['merchant_name'] = replace_blank_with(df, 'merchant_name', 'UNKNOWN')
-
-    # Standardize merchant category to lowercase
-    df['merchant_category'] = df['merchant_category'].str.lower()
-
-    # Standardize channel to lowercase
-    df['channel'] = df['channel'].str.lower()
-
-    # Standardize pos_entry_mode to lowercase
-    df['pos_entry_mode'] = df['pos_entry_mode'].str.lower()
 
     # Standardize merchant country codes
     df['merchant_country'] = standardize_country_codes(df, 'merchant_country')
 
     # Add derived columns
-    df = add_ingestion_timestamp(df)
     df = add_transaction_date(df, 'transaction_timestamp')
     df = add_transaction_hour(df, 'transaction_timestamp')
     df = add_is_weekend(df, 'transaction_timestamp')
     df = add_amount_category(df, 'transaction_amount')
     df = add_utilization_rate(df, 'account_balance', 'credit_limit')
     df = add_is_high_risk_context(df, 'is_foreign_transaction', 'num_declined_7d', 'distance_from_home_km')
+    df = add_ingestion_timestamp(df)
 
     # Type casting
     df = cast_column(df, 'transaction_amount', 'float64')
@@ -95,11 +85,8 @@ def run():
     df = cast_column(df, 'is_weekend', 'integer')
     df = cast_column(df, 'is_high_risk_context', 'integer')
 
-    # Save results
     save_csv(df, OUTPUT_PATH)
-
-    # Print completion message
-    print("ETL pipeline completed successfully.")
+    print("ETL process completed successfully.")
 
 if __name__ == "__main__":
     run()
