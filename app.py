@@ -238,7 +238,7 @@ digraph etl_pipeline {{
 
     analyst   [{node(ns["analyst"],  "Analyst\\nParse Requirements")}]
     developer [{node(ns["developer"], "Developer\\nGenerate Pipeline")}]
-    executor  [{node(ns["executor"],  "Executor\\nRun Pipeline")}]
+    executor  [{node(ns["executor"],  "Code Execution\\nRun Pipeline")}]
     tester    [{node(ns["tester"],    "Tester\\nValidate Output")}]
 
     analyst   -> developer [label=" mapping.json" color="#9E9E9E" fontcolor="#9E9E9E"]
