@@ -40,16 +40,13 @@ def generate_test_results(source_df, df, parsed_requirements):
 
     # Test: timestamp_conversion_logic
     try:
-        if 'transaction_timestamp' in df.columns:
-            df['transaction_timestamp'] = pd.to_datetime(df['transaction_timestamp'], errors='coerce')
-            valid_range = (df['transaction_timestamp'] >= '2020-01-01') & (df['transaction_timestamp'] <= '2030-01-01')
-            timestamp_pass = df['transaction_timestamp'].notna().all() and valid_range.all()
-        else:
-            timestamp_pass = False
+        df['transaction_timestamp'] = pd.to_datetime(df['transaction_timestamp'], errors='coerce')
+        valid_range = (df['transaction_timestamp'] >= '2020-01-01') & (df['transaction_timestamp'] <= '2030-01-01')
+        timestamp_pass = df['transaction_timestamp'].notna().all() and valid_range.all()
         results.append({
             'name': 'timestamp_conversion_logic',
             'passed': timestamp_pass,
-            'details': f"valid_range={valid_range.sum()} out of {len(df)}"
+            'details': f"invalid_timestamps_count={(~valid_range).sum()}"
         })
     except Exception as e:
         results.append({
@@ -60,15 +57,12 @@ def generate_test_results(source_df, df, parsed_requirements):
 
     # Test: merchant_country_standardization
     try:
-        if 'merchant_country' in df.columns:
-            invalid_countries = df['merchant_country'].isin(['USA', 'us', 'U.S.', 'United States'])
-            country_pass = not invalid_countries.any()
-        else:
-            country_pass = False
+        invalid_countries = df['merchant_country'].isin(['USA', 'us', 'U.S.', 'United States'])
+        country_pass = not invalid_countries.any()
         results.append({
             'name': 'merchant_country_standardization',
             'passed': country_pass,
-            'details': f"invalid_countries_count={invalid_countries.sum()}"
+            'details': f"invalid_country_count={invalid_countries.sum()}"
         })
     except Exception as e:
         results.append({
@@ -79,15 +73,12 @@ def generate_test_results(source_df, df, parsed_requirements):
 
     # Test: merchant_name_blank_handling
     try:
-        if 'merchant_name' in df.columns:
-            blank_names = (df['merchant_name'].str.strip() == '')
-            name_pass = not blank_names.any()
-        else:
-            name_pass = False
+        blank_names = df['merchant_name'].str.strip() == ''
+        name_pass = not blank_names.any()
         results.append({
             'name': 'merchant_name_blank_handling',
             'passed': name_pass,
-            'details': f"blank_names_count={blank_names.sum()}"
+            'details': f"blank_name_count={blank_names.sum()}"
         })
     except Exception as e:
         results.append({
@@ -114,16 +105,11 @@ def generate_test_results(source_df, df, parsed_requirements):
             'num_transactions_24h': pd.api.types.is_integer_dtype,
             'num_declined_7d': pd.api.types.is_integer_dtype
         }
-        type_pass = True
-        for col, check in type_checks.items():
-            if col in df.columns:
-                if not check(df[col]):
-                    type_pass = False
-                    break
+        type_pass = all(check(df[col]) for col, check in type_checks.items())
         results.append({
             'name': 'type_standardization_checks',
             'passed': type_pass,
-            'details': f"checked_columns={list(type_checks.keys())}"
+            'details': f"failed_columns={[col for col, check in type_checks.items() if not check(df[col])]}"
         })
     except Exception as e:
         results.append({
@@ -137,11 +123,10 @@ def generate_test_results(source_df, df, parsed_requirements):
         source_row_count = len(source_df)
         output_row_count = len(df)
         removed_count = source_row_count - output_row_count
-        rowcount_pass = output_row_count > 0
         results.append({
             'name': 'output_schema_rowcount_sanity',
-            'passed': rowcount_pass,
-            'details': f"source_row_count={source_row_count}, output_row_count={output_row_count}, removed_count={removed_count}"
+            'passed': output_row_count > 0,
+            'details': f"source_row_count={source_row_count}, output_row_count={output_row_count}, removed_count={removed_count}, rationale=ETL filtering"
         })
     except Exception as e:
         results.append({

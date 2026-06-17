@@ -8,10 +8,10 @@ row_count: 1000
 all_passed: True
 
 --- Test Results ---
-PASS | expected_columns_present | expected_target_count=32, present_target_count=32, missing_target_columns=[], legacy_source_names=['cardholder_zip', 'cardholder_state', 'merchant_id', 'account_balance', 'is_foreign_transaction', 'transaction_id', 'cardholder_city', 'cardholder_age', 'pos_entry_mode', 'account_age_days', 'num_transactions_24h', 'credit_limit', 'num_declined_7d', 'merchant_category', 'merchant_city', 'distance_from_home_km', 'avg_amount_30d', 'account_id', 'channel', 'merchant_state', 'merchant_country', 'merchant_name']
+PASS | expected_columns_present | expected_target_count=32, present_target_count=32, missing_target_columns=[], legacy_source_names=['avg_amount_30d', 'merchant_name', 'transaction_id', 'account_balance', 'channel', 'num_declined_7d', 'cardholder_state', 'is_foreign_transaction', 'cardholder_age', 'merchant_city', 'merchant_id', 'account_id', 'credit_limit', 'num_transactions_24h', 'distance_from_home_km', 'cardholder_city', 'merchant_category', 'merchant_state', 'merchant_country', 'cardholder_zip', 'account_age_days', 'pos_entry_mode']
 PASS | rename_mapping_applied | actual_renames={'Time': 'transaction_timestamp', 'Amount': 'transaction_amount', 'Class': 'is_fraud'}
-PASS | timestamp_conversion_logic | valid_range=1000 out of 1000
-PASS | merchant_country_standardization | invalid_countries_count=0
-PASS | merchant_name_blank_handling | blank_names_count=0
-PASS | type_standardization_checks | checked_columns=['transaction_amount', 'credit_limit', 'account_balance', 'avg_amount_30d', 'distance_from_home_km', 'utilization_rate', 'is_fraud', 'is_foreign_transaction', 'is_weekend', 'is_high_risk_context', 'cardholder_age', 'account_age_days', 'num_transactions_24h', 'num_declined_7d']
-PASS | output_schema_rowcount_sanity | source_row_count=1000, output_row_count=1000, removed_count=0
+PASS | timestamp_conversion_logic | invalid_timestamps_count=0
+PASS | merchant_country_standardization | invalid_country_count=0
+PASS | merchant_name_blank_handling | blank_name_count=0
+PASS | type_standardization_checks | failed_columns=[]
+PASS | output_schema_rowcount_sanity | source_row_count=1000, output_row_count=1000, removed_count=0, rationale=ETL filtering
