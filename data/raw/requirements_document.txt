@@ -9,7 +9,6 @@ Source Data Overview:
 - File: data/raw/sample_transactions.csv
 - Records: 1,000 transactions
 - Columns: 25
-- Fraud distribution: ~31 fraudulent (~3%), ~969 legitimate (~97%)
 
 Source Schema (as received from vendor):
 Core:
@@ -52,7 +51,7 @@ fraud_transactions
 
 Target Schema:
 Core:
-  - transaction_id:          string        — pass through, uniqueness enforced
+  - transaction_id:          string        
   - transaction_timestamp:   timestamp     — derived from "Time" (seconds → datetime)
   - transaction_amount:      decimal(10,2) 
   - is_fraud:                integer       
