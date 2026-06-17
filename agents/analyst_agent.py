@@ -185,14 +185,14 @@ _REQUIREMENTS_SYSTEM_PROMPT = (
 )
 
 
-def _llm_enrich_dictionary(profile):
+def _llm_enrich_dictionary(profile, model=None):
     """Enrich data profile with LLM-generated business meanings and insights."""
     human_prompt = _build_profiler_prompt(profile)
     prompt = ChatPromptTemplate.from_messages([
         ("system", _PROFILER_SYSTEM_PROMPT),
         ("human", "{user_prompt}"),
     ])
-    chain = prompt | make_llm() | StrOutputParser()
+    chain = prompt | make_llm(model) | StrOutputParser()
     raw_response = chain.invoke({"user_prompt": human_prompt})
     try:
         PromptResponseLogger().log(
@@ -210,14 +210,14 @@ def _llm_enrich_dictionary(profile):
     return result["data_dictionary"]
 
 
-def build_data_dictionary(file_path, output_path, use_llm=True):
+def build_data_dictionary(file_path, output_path, use_llm=True, model=None):
     """Profile a CSV file and generate data dictionary JSON."""
     profile = profile_data(file_path)
 
     data_dictionary = profile["columns"]
     if use_llm and llm_available():
         try:
-            llm_dictionary = _llm_enrich_dictionary(profile)
+            llm_dictionary = _llm_enrich_dictionary(profile, model=model)
             # Accept LLM output if size aligns with source columns
             if isinstance(llm_dictionary, list) and len(llm_dictionary) == len(profile["columns"]):
                 data_dictionary = llm_dictionary
@@ -476,7 +476,7 @@ def _build_requirements_prompt(text):
     )
 
 
-def parse_requirements(text, use_llm=True):
+def parse_requirements(text, use_llm=True, model=None):
     """Parse requirements text using LLM or deterministic fallback."""
     if use_llm and llm_available():
         try:
@@ -485,7 +485,7 @@ def parse_requirements(text, use_llm=True):
                 ("system", _REQUIREMENTS_SYSTEM_PROMPT),
                 ("human", "{user_prompt}"),
             ])
-            chain = prompt | make_llm() | StrOutputParser()
+            chain = prompt | make_llm(model) | StrOutputParser()
             raw_response = chain.invoke({"user_prompt": human_prompt})
             try:
                 PromptResponseLogger().log(
@@ -512,10 +512,10 @@ def parse_requirements(text, use_llm=True):
     return _parse_requirements_rule_based(text)
 
 
-def save_source_to_target_mapping(requirements_path, output_path, use_llm=True):
+def save_source_to_target_mapping(requirements_path, output_path, use_llm=True, model=None):
     """Parse requirements document and save source-to-target mapping JSON."""
     requirements_text = _read_requirements_document(requirements_path)
-    parsed = parse_requirements(requirements_text, use_llm=use_llm)
+    parsed = parse_requirements(requirements_text, use_llm=use_llm, model=model)
 
     output_file = Path(output_path)
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -532,6 +532,7 @@ def analyze_requirements_and_data(
     requirements_path,
     output_mapping_path,
     use_llm=True,
+    model=None,
 ):
     """
     Parse requirements document and save source-to-target mapping JSON.
@@ -540,6 +541,7 @@ def analyze_requirements_and_data(
         requirements_path: Path to requirements document
         output_mapping_path: Where to write source-to-target mapping JSON
         use_llm: Whether to use LLM for enrichment (falls back to rule-based)
+        model: Optional model override (e.g. "gpt-4o", "gpt-4.1")
 
     Returns:
         {
@@ -551,6 +553,7 @@ def analyze_requirements_and_data(
         requirements_path=requirements_path,
         output_path=output_mapping_path,
         use_llm=use_llm,
+        model=model,
     )
 
     return {

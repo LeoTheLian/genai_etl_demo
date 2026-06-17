@@ -273,6 +273,7 @@ def _generate_tests_code_llm(
     parsed_requirements: dict,
     source_df: pd.DataFrame,
     processed_df: pd.DataFrame,
+    model: str | None = None,
 ) -> str:
     user_prompt = _build_testing_prompt(
         requirements_text,
@@ -284,7 +285,7 @@ def _generate_tests_code_llm(
         ("system", _TESTER_SYSTEM_PROMPT),
         ("human", "{user_prompt}"),
     ])
-    chain = (prompt | make_llm() | StrOutputParser()).with_retry(stop_after_attempt=2)
+    chain = (prompt | make_llm(model) | StrOutputParser()).with_retry(stop_after_attempt=2)
     raw_response = chain.invoke({"user_prompt": user_prompt})
     try:
         PromptResponseLogger().log(
@@ -342,6 +343,7 @@ def run_tests(
     processed_data_path: str,
     report_path: str,
     generated_tests_output_path: str = "outputs/generated_tests.py",
+    model: str | None = None,
 ) -> dict:
     path_issues = _validate_input_paths(
         requirements_path,
@@ -394,6 +396,7 @@ def run_tests(
         parsed_requirements,
         source_df,
         df,
+        model=model,
     )
 
     generated_tests_path = Path(generated_tests_output_path)

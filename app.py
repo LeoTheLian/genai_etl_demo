@@ -27,7 +27,7 @@ from agents.prompt_logger import PromptResponseLogger
 
 # ── Page config (must be the first Streamlit call) ────────────────────────────
 st.set_page_config(
-    page_title="GenAI ETL Orchestrator",
+    page_title="GenAI ETL Data Curation",
     page_icon="⚙️",
     layout="wide",
 )
@@ -117,6 +117,19 @@ def _render_sidebar() -> tuple[dict, bool]:
             "Skip analyst (use cached mapping)", disabled=not is_idle
         )
 
+        st.markdown("**Model selection**")
+        _analyst_models = ["gpt-4o-mini", "gpt-4o", "gpt-4.1"]
+        _code_models = ["o4-mini", "gpt-4.1", "gpt-4o", "gpt-4o-mini"]
+        analyst_model = st.selectbox(
+            "Analyst model", _analyst_models, index=0, disabled=not is_idle
+        )
+        developer_model = st.selectbox(
+            "Developer model", _code_models, index=0, disabled=not is_idle
+        )
+        tester_model = st.selectbox(
+            "Tester model", _code_models, index=0, disabled=not is_idle
+        )
+
         st.divider()
 
         run_clicked = False
@@ -150,6 +163,9 @@ def _render_sidebar() -> tuple[dict, bool]:
             "validate": validate,
             "max_retries": max_retries if validate else 1,
             "skip_analyst": skip_analyst,
+            "analyst_model": analyst_model,
+            "developer_model": developer_model,
+            "tester_model": tester_model,
         }
 
     return config, run_clicked
@@ -350,6 +366,7 @@ def _render_tester_section() -> None:
     if results:
         df = pd.DataFrame(results)[["name", "passed", "details"]]
         df = df.rename(columns={"name": "Test", "passed": "Status", "details": "Details"})
+        df["Test"] = df["Test"].map(_friendly_test_name)
         df["Status"] = df["Status"].map({True: "PASS", False: "FAIL"})
 
         def _color_status(val):
@@ -390,6 +407,7 @@ def _run_phase(config: dict) -> None:
                 analysis = analyze_requirements_and_data(
                     requirements_path=config["req_path"],
                     output_mapping_path="outputs/source_to_target_mapping.json",
+                    model=config["analyst_model"],
                 )
                 mapping = analysis["mapping"]
 
@@ -417,6 +435,7 @@ def _run_phase(config: dict) -> None:
                 data_dictionary=None,
                 test_feedback=st.session_state.test_feedback,
                 requirements_text=st.session_state.requirements_text,
+                model=config["developer_model"],
             )
 
         st.session_state.pipeline_path = pipeline_path
@@ -453,6 +472,7 @@ def _run_phase(config: dict) -> None:
                 source_data_path=config["csv_path"],
                 processed_data_path=st.session_state.processed_data_path,
                 report_path="data/processed/test_report.txt",
+                model=config["tester_model"],
             )
 
         st.session_state.test_summary = summary
@@ -561,6 +581,27 @@ def _render_action_buttons(config: dict) -> None:
             st.rerun()
 
 
+# ── Test name display labels ──────────────────────────────────────────────────
+
+_TEST_NAME_LABELS = {
+    "expected_columns_present":         "Expected Columns Present",
+    "rename_mapping_applied":           "Column Rename Applied",
+    "timestamp_conversion_logic":       "Timestamp Conversion",
+    "merchant_country_standardization": "Country Code Standardization",
+    "merchant_name_blank_handling":     "Merchant Name Blank Handling",
+    "type_standardization_checks":      "Type Standardization",
+    "output_schema_rowcount_sanity":    "Row Count Sanity",
+    "requirements_path_exists":         "Requirements File Found",
+    "source_data_path_exists":          "Source Data File Found",
+    "processed_data_path_exists":       "Processed Data File Found",
+    "generated_tests_runtime":          "Test Execution Error",
+}
+
+
+def _friendly_test_name(name: str) -> str:
+    return _TEST_NAME_LABELS.get(name, name.replace("_", " ").title())
+
+
 # ── LLM Prompts & Responses tab ───────────────────────────────────────────────
 
 _CALL_TYPE_LABELS = {
@@ -638,7 +679,7 @@ def main() -> None:
     _init_session_state()
     config, run_clicked = _render_sidebar()
 
-    st.title("⚙️ GenAI ETL Orchestrator")
+    st.title("⚙️ GenAI ETL Data Curation")
     st.caption("Step-by-step pipeline with human review at each stage.")
 
     if run_clicked:

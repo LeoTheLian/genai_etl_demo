@@ -78,8 +78,9 @@ from agents.etl_utilities import (
     standardize_country_codes,
 )
 
-INPUT_PATH  = "{source_file}"
-OUTPUT_PATH = "data/processed/{target_table}.csv"
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+INPUT_PATH  = str(_PROJECT_ROOT / "{source_file}")
+OUTPUT_PATH = str(_PROJECT_ROOT / "data/processed/{target_table}.csv")
 """
 
 _PIPELINE_FOOTER = """\
@@ -171,7 +172,11 @@ def _build_developer_prompt(
         Rules:
         - Start with `def run():` and indent all code by 4 spaces.
         - Use only the listed etl_utilities functions. Do not import pandas directly.
-        - Do not overwrite the variables INPUT_PATH, OUTPUT_PATH. Use existing ones provided in the pipeline header.
+        - CRITICAL: Do NOT define, assign, or declare INPUT_PATH or OUTPUT_PATH anywhere
+          inside the run() function. They are already defined as module-level constants
+          in the pipeline header. Use them directly: `df = load_csv(INPUT_PATH)` and
+          `save_csv(df, OUTPUT_PATH)`. Any redefinition inside run() breaks the absolute
+          path resolution built into those constants.
         - Functions returning Series (replace_blank_with, impute_nulls, standardize_country_codes):
           Assign directly to column: df[col] = function(df, col, ...)
         - Functions returning DataFrame (cast_column, add_* functions):
@@ -261,6 +266,7 @@ def _generate_code_llm(
     data_dictionary: dict | None = None,
     error_feedback: str | None = None,
     test_feedback: dict | None = None,
+    model: str | None = None,
 ) -> str:
     user_prompt = _build_developer_prompt(mapping, framework, data_dictionary, test_feedback)
     if error_feedback:
@@ -270,7 +276,7 @@ def _generate_code_llm(
         ("system", _DEVELOPER_SYSTEM_PROMPT),
         ("human", "{user_prompt}"),
     ])
-    chain = (prompt | make_llm() | StrOutputParser()).with_retry(stop_after_attempt=2)
+    chain = (prompt | make_llm(model) | StrOutputParser()).with_retry(stop_after_attempt=2)
     raw_response = chain.invoke({"user_prompt": user_prompt})
     try:
         PromptResponseLogger().log(
@@ -299,6 +305,7 @@ def generate_pipeline_code(
     max_retries: int = 3,
     test_feedback: dict | None = None,
     requirements_text: str | None = None,
+    model: str | None = None,
 ) -> str:
     """
     Generate an executable ETL pipeline Python file from source-to-target mapping.
@@ -333,7 +340,8 @@ def generate_pipeline_code(
     source_file = mapping.get("source_file", "data/raw/sample_transactions.csv")
 
     run_body = _generate_code_llm(
-        mapping, framework, data_dictionary, error_feedback=None, test_feedback=test_feedback
+        mapping, framework, data_dictionary, error_feedback=None, test_feedback=test_feedback,
+        model=model,
     )
 
     header = _PIPELINE_HEADER.format(
