@@ -360,7 +360,7 @@ def _render_tester_section() -> None:
     passed = sum(1 for r in results if r.get("passed"))
     total = len(results)
 
-    st.subheader("Tester — Data Quality Results")
+    st.subheader("Tester — Processed Data Testing Results")
     st.caption(f"Attempt {attempt} · {passed}/{total} tests passed")
 
     if results:
